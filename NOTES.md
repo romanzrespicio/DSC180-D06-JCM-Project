@@ -29,7 +29,13 @@ Things to check every time (assistants get these wrong without warning):
 - Changed: added `environment.yml`, `check_env.py`, `README.md`, `.gitignore`.
   The geo packages come from conda-forge because cartopy needs GEOS/PROJ.
   jax/flax/optax come from pip. On DataHub, `jax[cuda12]` replaces the CPU jax.
-- Checked: `python check_env.py` imports everything locally (CPU). Still to do:
-  run `python check_env.py --gpu` on DataHub and confirm `jax.devices()` lists a
-  CUDA device.
+- Checked: `python check_env.py` imports everything locally (CPU). On DataHub
+  (Group D06 scipy-ml-notebook, 1 GPU), env at `~/envs/jcm` plus
+  `jax[cuda12]`: `check_env.py --gpu` passed with jax 0.11.2,
+  `jax.devices()` = `[CudaDevice(id=0)]`.
+- Gotcha: on DataHub, `conda activate` didn't take, so the first
+  `pip install "jax[cuda12]"` went into base Python's `~/.local` and pulled in
+  numpy 2.x, which conflicts with base tensorflow/torch. We uninstalled those
+  packages again (base numpy is back to 1.26.4). Fix: call `~/envs/jcm/bin/python`
+  directly instead of activating.
 - Open questions: none yet. Climate models get installed in week 4.
