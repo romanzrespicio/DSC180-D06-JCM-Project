@@ -22,6 +22,16 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-07 — Downloaded ClimateBench data (Roman)
+- Source: Zenodo record 7064308, ClimateBench v1.0.0. Files `train_val.tar.gz`
+  and `test.tar.gz`; `CMIP6.zip` not needed for tasks 1–3.
+- Location on DataHub: `~/data/climatebench/` (kept outside the repo).
+- Checked: downloaded byte counts match Zenodo (839129430 and 74442376).
+  Zenodo md5: train_val `9bf0ebd9662667cc1ed78fd3eb5cad4e`,
+  test `a09a3ddc8c24e1d6d4b1ee4be5936510`.
+- Note: ssp245 is the test scenario. Plotting it is fine, but never fit or
+  normalize on it.
+
 ## 2026-10-06 — Repo and environment setup (Roman)
 - Asked: Claude Code to create the team repo, NOTES.md, a Python 3.12 env (>= 3.11 required)
   with xarray, dask, netCDF4, cartopy, scikit-learn, jax, flax, optax, and a
