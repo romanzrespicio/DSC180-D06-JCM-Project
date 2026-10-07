@@ -1,0 +1,19 @@
+name: jcm
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12  # >=3.11 required; pinned so CUDA jax wheels exist
+  - xarray
+  - dask
+  - netcdf4
+  - cartopy
+  - scikit-learn
+  - matplotlib
+  - ipykernel
+  - pip
+  - pip:
+      # CPU jax for laptops. On DataHub (GPU), run after creating the env:
+      #   pip install -U "jax[cuda12]"
+      - jax
+      - flax
+      - optax
