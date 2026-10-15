@@ -1,0 +1,22 @@
+name: jcm-gp
+# Env for the Gaussian-process emulator (GPflow on TensorFlow).
+# Kept apart from `jcm` so TensorFlow's numpy/ml_dtypes pins can't break jax/flax there.
+# Everything comes from conda-forge: pip's tensorflow wheel bundles its own
+# libraries and segfaults when pyarrow (pulled in by pandas/dask) is imported.
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - pandas
+  - xarray
+  - dask
+  - netcdf4
+  - cartopy
+  - matplotlib
+  # versions verified together on macOS (arm64); unpinned installs broke the first builds
+  - tensorflow=2.21
+  - tensorflow-probability=0.25
+  - gpflow=2.9.2
+  - setuptools<81  # gpflow 2.9 imports pkg_resources, removed in setuptools 81
+  - ipykernel
