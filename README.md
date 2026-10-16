@@ -31,3 +31,16 @@ python -m ipykernel install --user --name jcm-gp --display-name "Python (jcm-gp)
 ```
 
 Then pick the **Python (jcm-gp)** kernel in Jupyter. Only tested on macOS (arm64) so far.
+
+## Week 3 baselines: shared prediction format
+
+Each baseline notebook ends by saving its `ssp245` predictions to `results/<model>_ssp245.nc`
+(`pattern_scaling`, `gp`, `rf`, `cnn_lstm`), so `notebooks/Week3_Leaderboard.ipynb` (Task 5) can score
+every model the same way:
+
+- variables `tas`, `diurnal_temperature_range`, `pr`, `pr90`
+- dims `(time, lat, lon)` on the ClimateBench 96 × 144 grid, `time` in years 2015–2100
+- precipitation in mm/day (× 86400 from kg m-2 s-1)
+
+The metric code (spatial / global / total NRMSE) is in `metrics.py`; import it to check your scores
+while developing. `results/*.nc` files are committed to git so everyone can run the leaderboard.

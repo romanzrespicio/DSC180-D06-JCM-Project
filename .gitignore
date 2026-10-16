@@ -3,3 +3,5 @@ __pycache__/
 .DS_Store
 *.nc
 data/
+# Week 3 model predictions are shared through git (about 20 MB per model)
+!results/*.nc
