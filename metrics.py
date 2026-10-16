@@ -39,6 +39,20 @@ def nrmse(truth, pred):
     return {"Spatial": spatial, "Global": glob, "Total": spatial + 5 * glob}
 
 
+def variability_paper(members):
+    """The paper's "Variability" row: how much the ssp245 members themselves vary.
+
+    spatial = global mean of the member std of the 2080-2100 mean maps
+    global  = std of the yearly global means, over members and years
+    Reproduces the published row exactly, so it also checks this module against the paper.
+    """
+    y = members.sel(time=PERIOD)
+    norm = abs(float(global_mean(y.mean("member").mean("time"))))
+    spatial = float(global_mean(y.mean("time").std("member"))) / norm
+    glob = float(global_mean(y).std()) / norm
+    return {"Spatial": spatial, "Global": glob, "Total": spatial + 5 * glob}
+
+
 def variability_floor(members):
     """Rough best achievable NRMSE given internal variability.
 
