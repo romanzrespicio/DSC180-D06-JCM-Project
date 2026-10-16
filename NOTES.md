@@ -22,6 +22,38 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-15 — Week 3 GP emulator, shared metrics, comparison with official GP (Roman)
+- Asked: Claude Code to write a GP emulator from scratch (without the official
+  notebooks), a shared NRMSE module, and a leaderboard notebook; then to compare
+  our GP with the official one once ours was finished.
+- Changed: `environment-gp.yml` (separate `jcm-gp` env for GPflow/TensorFlow so
+  `jcm` keeps working), `metrics.py`, `notebooks/Week3_GaussianProcess.ipynb`
+  (section 9 = comparison), `notebooks/Week3_Leaderboard.ipynb`,
+  `results/gp_ssp245*.nc`. Our kernel adds a linear CO2 term (warming ~ linear in
+  cumulative CO2, Week 1) to a Matérn-5/2 ARD kernel.
+- Checked:
+  - Perfect prediction scores exactly 0 in `metrics.py`; formula matches the
+    paper's scoring code (`analysis_notebooks/paper_figures.ipynb`).
+  - Matérn-only GP (no linear term) gives tas global NRMSE 0.0736 vs published
+    0.0738, so data, features and metric reproduce the paper. The linear term
+    explains our better tas score (total 0.461 -> 0.299).
+  - Leakage audit: ssp245 outputs only used for scoring/plots/grid coords; PCA and
+    all standardisation use training years only.
+- AI got wrong / nearly wrong (Question 4):
+  - pip silently upgraded numpy past the pin and fell back to gpflow 2.5; pip's
+    tensorflow then segfaulted with conda's pyarrow. Fixed by taking everything
+    from conda-forge. Caught by import/smoke tests.
+  - Targets were float32 and GPflow needs float64; caught by a short test fit
+    before the full run.
+  - The assistant had read the official GP code before we asked it to work
+    without it; it disclosed this, and we only used the official code for the
+    comparison afterwards.
+- Found in the official code: the pr90 GP uses `maxiter=35` (others 1000); the
+  DTR and pr90 notebooks can't run as saved (mismatched variable names).
+- Open questions: effect of per-cell vs single-number target standardisation and
+  of area-weighted EOFs (untested); GP predictive std is too wide (98-99% of
+  truth within ±2σ, target 95%).
+
 ## 2026-10-06 — Repo and environment setup (Roman)
 - Asked: Claude Code to create the team repo, NOTES.md, a Python 3.12 env (>= 3.11 required)
   with xarray, dask, netCDF4, cartopy, scikit-learn, jax, flax, optax, and a
