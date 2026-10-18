@@ -22,6 +22,45 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-16 — Week 3 random-forest emulator (Coltrane)
+- Asked: Claude Code to write an RF emulator without the official notebooks (same
+  features as our GP), choose hyperparameters without ssp245, and then compare with
+  the official RF.
+- Changed: `notebooks/Week3_RandomForest.ipynb`, `results/rf_ssp245.nc`,
+  `results/rf_cv_scores.csv` (cached CV search), `figures/week3_rf_importance.png`.
+  Hyperparameters from a random search over the paper's search space, scored by
+  leave-one-scenario-out CV over the 6 training scenarios (EOFs refit per fold).
+  Final model: 5 seeds x 200 trees. Trees are built 25 at a time and averaged,
+  because one tree with 13,824 outputs takes 16-100 MB.
+- Checked:
+  - Features match the official RF (`RF_model_ESEm.ipynb`): CO2, CH4, 5 SO2 PCs,
+    5 BC PCs; one full-grid forest per target.
+  - Leakage audit: ssp245 is used only for scoring, plots and grid coordinates.
+    The CV never sees it.
+  - Seed spread is small (tas total 1.48 ± 0.12), so the gap to the paper is real.
+- Result: tas total ~1.5 vs 0.40 published (not reproduced); dtr better (16.7 vs
+  22.5); pr and pr90 slightly worse. Post-hoc diagnostics (not used to choose the
+  model, see notebook section 9): `max_features='sqrt'` causes most of the tas
+  spatial error; training on 6 scenarios instead of the paper's 4 causes most of
+  the tas global error (the forest's global mean jumps ~1 K between 2080 and 2090,
+  because trees can't interpolate between scenarios).
+- AI got wrong / nearly wrong (Question 4):
+  - First search space allowed `min_samples_leaf` 1 and 2: ~100 MB per tree, ~20 GB
+    for 200 trees on a 16 GB laptop. Caught by timing and measuring one small
+    forest before the full run; switched to the paper's space (leaf 4-12).
+  - Planned to score CV folds with `metrics.nrmse`, which asserts 2080-2100; the
+    historical folds end in 2014. Caught by reading `metrics.py` first; folds use
+    an area-weighted RMSE over all years instead.
+  - After seeing the poor tas score, the assistant proposed adding a second
+    "paper replica" RF to the leaderboard. We dropped it: it was proposed because
+    of the ssp245 score, which is the kind of test-set influence the brief warns
+    about. The diagnostics stay as text only.
+- Found in the official code: the EOF comment says √cos(lat) weights are applied,
+  but `Eof(X['BC'])` has no weights; `RF_model_ESEm.ipynb` trains on 4 scenarios
+  (no hist-GHG / hist-aer) while `Original_RF_model.ipynb` uses 6.
+- Open questions: why the paper replica (4 scenarios, unweighted EOFs) still gets
+  tas global 0.100 vs 0.058 published.
+
 ## 2026-10-15 — Week 3 GP emulator, shared metrics, comparison with official GP (Roman)
 - Asked: Claude Code to write a GP emulator from scratch (without the official
   notebooks), a shared NRMSE module, and a leaderboard notebook; then to compare
