@@ -22,6 +22,42 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-18 — Week 3 pattern-scaling emulator, comparison with official (annalyellis)
+- Asked: Claude Code to write pattern scaling from scratch (Task 1), answer the brief's question
+  about where test-time global-mean T comes from, then compare with the official
+  `pattern_scaling_model.ipynb` once ours was finished.
+- Changed: `notebooks/Week3_PatternScaling.ipynb`, `results/pattern_scaling_ssp245.nc`,
+  `results/pattern_scaling_ebm_ssp245.nc`, `figures/week3_ps_*.png`. Two versions:
+  - A (as in the paper): test-time T = true ssp245 ensemble-mean global tas, trailing
+    10-year rolling mean. Gets the answer's global trajectory, so it is a reference, not a
+    fair emulator.
+  - B (fair): T predicted from forcings by a one-box EBM (lagged cumulative CO2, CH4,
+    global-mean SO2 and BC), fit on training scenarios; timescale tau = 1 yr chosen by
+    leave-one-scenario-out CV over the 6 training scenarios.
+- Checked:
+  - Global mean of the fitted tas slope is exactly 1 K/K (as it must be).
+  - A replica of the official setup reproduces the published pattern-scaling row to
+    3 decimals for all four targets (notebook section 9).
+  - Leakage audit: patterns, EBM coefficients, tau and scaling use training scenarios only;
+    B uses ssp245 inputs (plus historical inputs for the 2014 state) and no ssp245 outputs.
+- Result: A = tas 0.320 (= published), dtr 18.55, pr 3.34, pr90 4.13 (published 19.72,
+  3.66, 4.46). B = tas 0.383, dtr 18.41, pr 3.45, pr90 4.23. Predicting T costs little on
+  ssp245: even the oracle input lags the trend (2.02 K vs 2.07 K over 2080-2100).
+- Why ours beats the published row on dtr/pr/pr90: training on hist-GHG and hist-aer
+  (the official uses 4 scenarios). Ensemble mean vs one member: no effect; intercept:
+  slightly worse. These variants were run after seeing ssp245 scores, so they stay
+  diagnostics; the model was not changed to the best-scoring variant.
+- AI got wrong / nearly wrong (Question 4):
+  - Proposing to drop the intercept after the ablation showed it scores slightly better
+    would have been tuning on ssp245; kept the pre-registered choice instead.
+  - (Add anything you catch when reviewing the notebook.)
+- Found in the official code: `fit_intercept=False`; single members (historical member 2
+  because member 1 "has some missing DTR values"); comment "smooth out the internal
+  variability otherwise it's cheating", but the smoothed truth still leaks the global trajectory.
+- Open questions: the EBM recovers only ~half the hist-aer cooling when hist-aer is left out
+  (one linear aerosol term); `Week3_Leaderboard.ipynb` and the GP notebook hardcode
+  `REPO = ~/DSC180-D06-JCM-Project`, which fails for clones elsewhere.
+
 ## 2026-10-16 — Week 3 random-forest emulator (Coltrane)
 - Asked: Claude Code to write an RF emulator without the official notebooks (same
   features as our GP), choose hyperparameters without ssp245, and then compare with
