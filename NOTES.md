@@ -22,6 +22,23 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-18 — Week 3 pattern scaling in JAX, Task 6 (annalyellis)
+- Asked: Claude Code to re-implement pattern scaling (both versions A and B) in pure JAX and
+  check it against the numpy notebook.
+- Changed: `notebooks/Week3_PatternScaling_JAX.ipynb`. Patterns fit two ways: closed form
+  (`jnp.linalg.lstsq`, jitted) and gradient descent (`jax.grad` per cell, `jax.vmap` over
+  13,824 cells, T standardised so plain GD converges). EBM lag written with `jax.lax.scan`.
+  No new results files: the JAX predictions equal the saved numpy ones.
+- Checked:
+  - GD coefficients equal lstsq to 1e-15; predictions equal the saved numpy files to
+    ~5e-8 relative (they were saved as float32); all NRMSE scores agree to 3e-8.
+  - float64 enabled (`jax_enable_x64`); in float32 the slopes differ from numpy by ~2e-7.
+- AI got wrong / nearly wrong (Question 4):
+  - The first draft of the notes claimed float32 would differ "at about 1e-6"; measured
+    it instead (2e-7) and corrected the text.
+- Open questions: for week 8, learn the EBM's tau jointly with its coefficients by gradient
+  instead of a grid search.
+
 ## 2026-10-18 — Week 3 pattern-scaling emulator, comparison with official (annalyellis)
 - Asked: Claude Code to write pattern scaling from scratch (Task 1), answer the brief's question
   about where test-time global-mean T comes from, then compare with the official
