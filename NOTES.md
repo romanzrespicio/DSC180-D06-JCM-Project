@@ -95,8 +95,13 @@ Things to check every time (assistants get these wrong without warning):
   22.5); pr and pr90 slightly worse. Post-hoc diagnostics (not used to choose the
   model, see notebook section 9): `max_features='sqrt'` causes most of the tas
   spatial error; training on 6 scenarios instead of the paper's 4 causes most of
-  the tas global error (the forest's global mean jumps ~1 K between 2080 and 2090,
-  because trees can't interpolate between scenarios).
+  the tas global error (the forest's global mean levels off at ~1.4 K after 2050
+  and is ~0.5 K too cold over 2080-2100, because trees can't interpolate between
+  scenarios).
+  - Correction (2026-10-19): an earlier version of this entry said the forest
+    "jumps ~1 K between 2080 and 2090". That was the diagnostic with the paper's
+    hyperparameters, not the submitted model; caught when plotting the submitted
+    model's global mean in `Week3_Presentation.ipynb`.
 - AI got wrong / nearly wrong (Question 4):
   - First search space allowed `min_samples_leaf` 1 and 2: ~100 MB per tree, ~20 GB
     for 200 trees on a 16 GB laptop. Caught by timing and measuring one small
