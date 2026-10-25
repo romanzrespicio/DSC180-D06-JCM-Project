@@ -1,0 +1,21 @@
+# Model environment for weeks 4-6 (JCM + JAX-ESM), for a laptop install. nrp/setup_jcm.sh
+# has the same pins for the NRP JupyterHub.
+#
+# jcm is pinned to the exact jax-gcm commit that jax-esm is tested against
+# (JCM_SUPPORTED_REV in jem/components/jcm/contract.py); jcm >= 3.0 at that
+# commit is not on PyPI, and jax-esm is not on PyPI at all.
+# To update: bump the jax-esm sha, then set the jcm sha to its JCM_SUPPORTED_REV.
+jcm @ git+https://github.com/climate-analytics-lab/jax-gcm@f378069090b127badbb158b06e2767f3be8f436c
+jax-esm @ git+https://github.com/climate-analytics-lab/jax-esm@2ae7a1be6c4523785b4c7fb04f7cf20dfff84d35
+
+# CUDA jax. Same bounds as jcm: jax 0.11 breaks `import flax` (and so `import jcm`).
+jax[cuda12]>=0.10,<0.11
+
+# analysis
+xarray
+netcdf4
+dask
+matplotlib
+cartopy
+ipykernel
+nbconvert

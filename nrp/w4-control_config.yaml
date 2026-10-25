@@ -1,0 +1,103 @@
+constants: {}
+physics:
+  checkpoint_terms: true
+  terms:
+    speedy_flags:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyFlags
+    speedy_forcing:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyForcing
+    speedy_humidity:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyHumidity
+    speedy_convection:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyConvection
+    speedy_large_scale_condensation:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyLargeScaleCondensation
+    speedy_clouds:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyClouds
+    speedy_shortwave_radiation:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyShortwaveRadiation
+    speedy_downward_longwave:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyDownwardLongwaveRadiation
+    speedy_surface_flux:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedySurfaceFlux
+    speedy_upward_longwave:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyUpwardLongwaveRadiation
+    speedy_vertical_diffusion:
+      _target_: jcm.physics.speedy.speedy_terms.SpeedyVerticalDiffusion
+grid:
+  vertical: sigma
+  layers: 8
+  spectral_truncation: 31
+  spmd_mesh: null
+  host_device_count: null
+dycore:
+  name: dinosaur
+  compute_omega: null
+  advection: null
+run:
+  time_step: 15
+  save_interval: 1
+  total_time: null
+  end_time: '2011-01-01'
+  start_time: '2000-01-01'
+  output_averages: true
+  output: model_state.nc
+  log_level: WARNING
+  sponge:
+    levels: 0
+    timescale_h: 3.0
+    enspodi: 2.0
+    damp_temperature: true
+    target_T_K: null
+  chunk_days: 30
+  output_prefix: chunked_run
+  monthly_means: true
+  save_chunks: false
+  snapshot_interval: null
+  snapshot_variables: []
+  checkpoint_path: ckpt.msgpack
+  archive_ckpt_every: 0
+  bail_on_unhealthy: true
+  mode: full
+  state_file: null
+  tracer_vars: null
+  column:
+    lat_deg: 0.0
+    lon_deg: 0.0
+init:
+  kind: isothermal
+terrain:
+  kind: from_file
+  file: hf://bundles/t63/terrain.nc
+  interpolate: true
+forcing:
+  kind: from_file
+  file: hf://bundles/t63/forcing_pd.nc
+  years: null
+  available_years: null
+  ozone_available_years: null
+  emissions_available_years: null
+  oxidants_available_years: null
+  align: wrap_year
+  ozone_align: auto
+  emissions_align: auto
+  oxidants_align: auto
+  persist: strict
+  ozone_persist: strict
+  emissions_persist: strict
+  oxidants_persist: strict
+  ozone_file: auto
+  emissions_file: auto
+  dms_file: auto
+  dust_file: auto
+  dust_preferential_file: auto
+  dust_soil_types_file: auto
+  dust_regions_file: auto
+  dust_roughness_file: auto
+  oxidants_file: auto
+nudging:
+  enabled: false
+diffusion:
+  kind: auto
+  scale: 1.0
+  tracer_positivity: auto

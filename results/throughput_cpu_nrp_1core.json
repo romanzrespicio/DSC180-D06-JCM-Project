@@ -1,0 +1,1 @@
+{"device": "cpu:0", "device_kind": "cpu", "host": "jupyter-cgowan-40ucsd-2eedu", "nproc": 1, "sim_days": 30.0, "call1_compile_plus_run_s": 109.4, "call2_run_s": 77.3, "compile_s": 32.1, "sim_years_per_hour": 3.8}

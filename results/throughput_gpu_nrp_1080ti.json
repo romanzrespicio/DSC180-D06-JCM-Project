@@ -1,0 +1,1 @@
+{"device": "cuda:0", "device_kind": "NVIDIA GeForce GTX 1080 Ti", "host": "jupyter-cgowan-40ucsd-2eedu", "sim_days": 365.0, "call1_compile_plus_run_s": 93.1, "call2_run_s": 64.5, "compile_s": 28.6, "sim_years_per_hour": 55.8}

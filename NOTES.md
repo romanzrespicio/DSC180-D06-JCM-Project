@@ -22,6 +22,39 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-25 — Week 4 Tasks 2–3: NRP env, throughput, control run (coltranegowan)
+- Asked: Claude Code to set up JCM + JAX-ESM on NRP (DataHub GPU does not work), time SPEEDY
+  (Task 2), and run the control (Task 3).
+- Changed: `nrp/setup_jcm.sh` (NRP JupyterHub env), `nrp/requirements.txt` (same pins, laptop),
+  `nrp/throughput.py`, `nrp/extract_monthly.py`, `nrp/make_co2_forcing.py`,
+  `nrp/w4-control_config.yaml`, `results/throughput_*.json`, `results/w4-control_monthly.nc`,
+  README Week 4 section.
+  - `pip install jcm jax-esm` from the brief fails: jax-esm is not on PyPI. jcm is pinned to
+    the jax-gcm commit in jax-esm's `contract.py` (f378069), jax-esm to 2ae7a1b.
+  - JupyterHub home is 5 GB and the CUDA env is 6.4 GB, so the env goes in /tmp (reinstall
+    after a restart). With a uv cache also in /tmp, the server restarted; no cache fixed it.
+  - The JCM CLI has no CO2 option; CO2 comes from a scalar `co2` in the forcing file, so
+    `make_co2_forcing.py` writes copies of the present-day bundle with `co2` set.
+  - Control output reduced from 1.1 GB to 17 MB: 2-D fields in full, T/u/v as zonal means.
+- Checked:
+  - Throughput: call 2 (compiled) faster than call 1 in short runs; GPU 55.8 sim yr/h agrees
+    with the control's 754 s for 11 years. 10-day and 365-day M2 runs agree to ~12% (the
+    365-day one is slower: the fanless M2 throttles).
+  - Variable meanings read from `jcm/physics/speedy/physics_data.py` (sw `ftop` = net SW,
+    lw `ftop` = OLR); `precnv + precls` equals `surface_exchange.precipitation`.
+  - Control: global-mean TOA terms steady after year 1; tas 287.95 K, P 2.92 mm/day.
+  - `ForcingData.from_file` reads the new `co2` (1680 ppmv for 4x).
+- AI got wrong / nearly wrong:
+  - First assumed a control CO2 of 360 ppmv from the comment in `speedy_forcing.py` (read on
+    jax-gcm main). Loading the forcing at the pinned commit gave 420 ppmv
+    (`DEFAULT_CO2_VMR_PPMV`); the script now reads the value from jcm.
+  - First 1-year M2 timing gave a negative compile time (throttling); used the 10-day run's
+    compile time instead.
+  - First proposed a custom Docker image + GitHub workflow + Kubernetes Jobs; dropped, the
+    JupyterHub was enough for an 11-year run.
+- Open questions: the net TOA imbalance in the control is about +4.9 W m-2 (OLR ~236.7);
+  check against ERA5/CERES in the evaluation task.
+
 ## 2026-10-18 — Week 3 pattern scaling in JAX, Task 6 (annalyellis)
 - Asked: Claude Code to re-implement pattern scaling (both versions A and B) in pure JAX and
   check it against the numpy notebook.

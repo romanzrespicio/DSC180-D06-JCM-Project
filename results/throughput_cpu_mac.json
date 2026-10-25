@@ -1,0 +1,1 @@
+{"device": "cpu:0", "device_kind": "cpu", "host": "Coltranes-Macbook-Air-2.local", "sim_days": 365.0, "call1_compile_plus_run_s": 364.9, "call2_run_s": 407.2, "compile_s": -42.3, "sim_years_per_hour": 8.8}
