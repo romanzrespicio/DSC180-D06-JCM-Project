@@ -22,6 +22,39 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-25 — Week 4 Tasks 4–5: control vs ERA5/NorESM2, TOA variability (annalyellis)
+- Asked: Claude Code to evaluate the control climatology (Task 4) and its TOA variability (Task 5)
+  without Casper, on a laptop.
+- Changed: `week4/get_obs.py`, `results/w4-era5_clim.nc`, `results/w4-noresm2_clim.nc`,
+  `notebooks/Week4_Evaluation.ipynb`, `figures/week4_*.png`, README Task 4–5 sections.
+  - ERA5 TOA fluxes from Copernicus CDS monthly means, 2005–2014 (free account, `~/.cdsapirc`,
+    licence accepted on the dataset page). ERA5 tas/pr/T/u/v from the WeatherBench2 6-hourly
+    climatology, 1990–2019 (public, slightly smoothed in time, centred 5 years before the forcing years).
+  - NorESM2-LM from Pangeo CMIP6 (`historical`, r1–r3, 2005–2014) instead of ClimateBench: the
+    ClimateBench historical outputs are annual anomalies from piControl (global tas 0.55 K) and only tas/pr.
+- Checked:
+  - ERA5 global TOA: 340.4 in, 97.7 reflected, 242.0 OLR, net +0.71 W m-2; NorESM2 net +0.56. Both are
+    plausible observed/CMIP6 imbalances, so units and signs (CDS daily accumulations / 86400, OLR = −ttr) are right.
+  - The 190 hPa warm layer is in JCM's raw sigma-level output (tropics: 250.5 K at σ = 0.1875 against
+    241.0 K at σ = 0.3125 and 217 K in ERA5), not from our sigma-to-pressure interpolation.
+  - The control's levels are evenly spaced: at the pinned commit, `grid: speedy_t31_l8` builds
+    `SigmaCoordinates.equidistant(8)` in `jcm/runners.py`; only `get_speedy_coords()` uses SPEEDY's table.
+  - JCM's incoming SW of 342.0 W m-2 is SPEEDY's `solc` in `jcm/physics/speedy/physical_constants.py`.
+  - TOA annual values are independent (lag-1 −0.05), so SE = σ/√N holds.
+- AI got wrong / nearly wrong (Question 4):
+  - WeatherBench2's TOA net fluxes are all NaN; the first build silently gave NaN ERA5 TOA terms. Caught
+    by printing the global means; switched to CDS.
+  - Planned to use the Weeks 1–2 ClimateBench NorESM2 files as the climatology; they are anomalies.
+    Caught by checking the global mean (0.55 K, against 287.6 K in piControl).
+  - The first summary said the jets were 50–72 m/s in every season; JJA NH is 28 m/s. Corrected after
+    checking the table.
+  - Before seeing Tasks 2–3 on main, the assistant wrote duplicate run scripts on `week4_annaly`;
+    dropped by resetting the branch to main.
+- Open questions: does a control on SPEEDY's own sigma levels remove the 190 hPa warm layer and the jet
+  bias (this matters for the Task 6 CO2 runs)? Why is OLR about 5 W m-2 low (JCM warns that its analytic
+  ozone profile biases clear-sky OLR low; not checked for SPEEDY)? CERES-EBAF would settle the 5 W m-2
+  ERA5/NorESM2 disagreement on the TOA components. 2001 may still be spin-up.
+
 ## 2026-10-25 — Week 4 Tasks 2–3: NRP env, throughput, control run (coltranegowan)
 - Asked: Claude Code to set up JCM + JAX-ESM on NRP (DataHub GPU does not work), time SPEEDY
   (Task 2), and run the control (Task 3).

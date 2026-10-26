@@ -71,7 +71,8 @@ while developing. `results/*.nc` files are committed to git so everyone can run 
 
 ## Week 4: JCM fixed-SST runs
 
-Status: Task 2 (throughput) and Task 3 (control run) are done (coltranegowan).
+Status: Task 2 (throughput) and Task 3 (control run) are done (coltranegowan). Task 4 (evaluation)
+and Task 5 (variability) are done (annalyellis).
 
 ### Task 2: throughput
 
@@ -120,6 +121,60 @@ Data for the other tasks: [results/w4-control_monthly.nc](results/w4-control_mon
 `level` is sigma with the **surface first** (0.9375 … 0.0625). Select levels by value
 (`ds.sel(level=0.9375)`), never by index. Weight global means by cos(lat).
 
+### Task 4: control vs ERA5 and NorESM2
+
+Notebook: [notebooks/Week4_Evaluation.ipynb](notebooks/Week4_Evaluation.ipynb) (runs on a laptop, no GPU).
+Figures: `figures/week4_*.png`. JCM uses 2001–2010.
+
+References, built by [week4/get_obs.py](week4/get_obs.py) on the T31 grid with the control's variable names
+(`results/w4-era5_clim.nc`, `results/w4-noresm2_clim.nc`):
+
+- **ERA5 TOA fluxes:** Copernicus CDS monthly means, 2005–2014. These need a free CDS account, a key in
+  `~/.cdsapirc`, and the dataset licence accepted. The raw file goes to `data/` (not in git).
+- **ERA5 tas, pr, T, u, v:** WeatherBench2 6-hourly climatology, 1990–2019 (public Google Cloud, no
+  account). WeatherBench2 also lists TOA net fluxes, but they are all NaN.
+- **NorESM2-LM:** CMIP6 `historical` monthly, mean of r1–r3, 2005–2014 (Pangeo). The ClimateBench files from
+  Weeks 1–2 only have annual anomalies of tas and pr, so they can't give seasons, T, u or the TOA terms.
+
+| | JCM | ERA5 | NorESM2-LM |
+|---|---|---|---|
+| global tas (K) | 287.96 | 287.52 | 288.20 |
+| global pr (mm/day) | 2.92 | 2.93 | 2.85 |
+| TOA incoming SW (W m-2) | 342.0 | 340.4 | 340.3 |
+| TOA reflected SW | 100.4 | 97.7 | 102.4 |
+| OLR | 236.7 | 242.0 | 237.3 |
+| **TOA net (down)** | **+4.9** | **+0.7** | **+0.6** |
+
+Pattern correlation with ERA5 (area-weighted), with NorESM2 − ERA5 as the benchmark:
+
+| | ANN | DJF | JJA | NorESM2 (ANN) |
+|---|---|---|---|---|
+| tas r (RMSE, K) | 0.99 (2.7) | 0.97 (4.3) | 0.98 (2.8) | 1.00 (1.5) |
+| pr r (RMSE, mm/day) | 0.63 (2.2) | 0.59 (2.8) | 0.62 (3.0) | 0.89 (1.0) |
+
+- **Global means:** close for tas and pr (SST is prescribed). Precipitation patterns are poor: tropical rain is
+  grid-scale and noisy.
+- **Upper troposphere:** a warm layer at σ = 0.1875 (about 190 hPa) is 33 K warmer than ERA5 in the tropics, an
+  inversion. It is in the raw model output, not from interpolation. The jets are too strong (annual 50/60 m/s NH/SH
+  against 27/31) and peak near 100 hPa. The Hadley cell is right in shape but about 45% (DJF) and 20% (JJA) weaker.
+- **Vertical grid (matters for Task 6):** the control's 8 sigma levels are **evenly spaced**, not SPEEDY's table.
+  The CLI's `grid: speedy_t31_l8` builds `SigmaCoordinates.equidistant(8)` (`jcm/runners.py`), while
+  `get_speedy_coords()` uses SPEEDY's levels. SPEEDY treats σ < 0.2 as stratosphere (ozone heating, no water-vapour
+  LW), which now includes the layer at 0.1875. This is the likely cause of the warm layer (not yet tested).
+- **TOA:** the +4.2 W m-2 excess over ERA5 is +1.6 from SPEEDY's insolation (`solc = 342.0`, i.e. S0 ≈ 1368
+  against CMIP6's 1361) and +5.4 from too little OLR, partly offset by +2.8 more reflected SW. ERA5 and NorESM2
+  differ by about 5 W m-2 on the components, so those numbers are uncertain by a few W m-2.
+
+### Task 5: TOA variability and run length
+
+Same notebook, section 7. Annual global-mean net TOA flux, 2001–2010: SD **0.145 W m-2**, lag-1 autocorrelation
+−0.05 (years independent). SE < 0.1 W m-2 needs N ≥ (σ/0.1)²:
+
+- **3 years** for one run's mean. The 10-year control has SE 0.046 W m-2.
+- **5 years per run** for an ERF, the difference of two runs (N ≥ 2(σ/0.1)²).
+- 2001 is the highest year (5.25). Without it, SD = 0.093. Use 1 year of spin-up + 5 analysed years per
+  perturbed run (`run.end_time=2006-01-01`).
+
 ### Next tasks: how to start
 
 - **ERF runs (0.5×, 2×, 4×, 8× CO2):** the JCM CLI has no CO2 option; CO2 comes from a `co2`
@@ -135,7 +190,8 @@ Data for the other tasks: [results/w4-control_monthly.nc](results/w4-control_mon
     hydra.run.dir=$HOME/runs/w4-co2x4 > run.log 2>&1 &
   /tmp/jcm-model/bin/python ~/extract_monthly.py ~/runs/w4-co2x4     # when it finishes
   ```
-  Set `run.end_time` from the variability task. Each run is ~1.1 GB on disk: run
+  From Task 5, 1 year of spin-up + 5 years is enough: `run.end_time=2006-01-01`. Each run is ~1.1 GB on disk: run
   `extract_monthly.py`, download the small file, then delete the run folder, because the home
   folder is 5 GB.
-- **ERA5:** subset on Casper (NCAR RDA) to t2m, total precipitation, T, u, and the TOA fluxes.
+- **Read the vertical-grid note in Task 4 first:** SPEEDY's CO2 absorption acts through the top layers, and the
+  control's layers are not SPEEDY's.
