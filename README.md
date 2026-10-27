@@ -21,7 +21,7 @@ python check_env.py --gpu
 
 ## Week 5: slab ocean
 
-Status: Task 1 is done (coltranegowan).
+Status: Task 1 is done (coltranegowan). Task 2 is done (annalyellis).
 
 ### Task 1: first coupled runs
 
@@ -72,6 +72,65 @@ global mean about −13 W m-2 over ice-free ocean. Two independent estimates (fr
 **For Task 2:** jem ships no Q-flux file (`ocean/slab_qflux.yaml` has `q_flux_file: ???`), and a relaxed slab cannot warm
 under CO2 (it is pulled back with τ = 30 days). Plan: run a relaxed control on Week 4's `forcing_pd.nc` SST/sea ice,
 calculate a monthly `qflux` climatology from it with calendar-month bins (`jem.accumulate.monthly_mean`), then run the Q-flux control.
+
+### Task 2: Q-flux slab control
+
+Notebook: [notebooks/Week5_QfluxControl.ipynb](notebooks/Week5_QfluxControl.ipynb) (kernel `jcm-model`; it reads only `results/`).
+Figures: `figures/week5_qflux*.png`.
+
+**Answer:** after a 4.5-year adjustment, the ocean-mean SST stays within **0.05 K** of the Week 4 climatology for 40 years.
+The residual drift is −0.03 ± 0.01 K per decade (2σ, 2020–2039). The annual-mean SST is within ±0.7 K in 95% of ocean cells.
+The seasonal cycle is about 40% too large, inherited from the relaxed run the Q-flux came from (see below).
+
+The runs used the laptop CPU (M2), about 7.5 min per model year. All of them use Week 4's boundary conditions (SST, sea ice, land,
+CO2 = 420 ppmv) and Week 4's terrain, so the slab has 3051 ocean cells:
+
+```bash
+python nrp/make_slab_bc.py BC_DIR              # forcing_pd.nc -> T31: BC_DIR/forcing_pd_t31.nc
+python nrp/run_slab.py relax  RUN_RELAX --bc forcing_pd_t31.nc --end 2011-01-01        # τ = 30 d, ~1.3 h
+python nrp/make_qflux.py RUN_RELAX forcing_pd_t31.nc qflux.nc                          # 2001–2010
+python nrp/run_slab.py qflux RUN_Q --bc forcing_pd_t31.nc --qflux qflux.nc --init RUN_RELAX --end 2040-01-01   # ~5 h
+python nrp/summarize_slab.py RUN_Q results/w5-task2_qcontrol                           # annual + last-20-yr clim
+```
+
+- `run_slab.py` runs one calendar year per `run_chunked` call and saves calendar-month means. It resumes from its checkpoint
+  if killed. In qflux mode it starts from the relaxed run's final state, but with the Q-flux ocean's own params and forcing
+  (a plain restore would bring back the relaxed run's zero Q-flux).
+- `make_qflux.py` computes the Q-flux as the heat the relaxation added, R = C·dTc/dt − C·(T − Tc)/τ, which is exact for
+  the slab's implicit step. Monthly means are converted to month-start values, because the slab interpolates its
+  climatologies between month starts.
+- Results: `results/w5-task2_qflux.nc` (Q-flux and the SST target), `w5-task2_{relax,qcontrol}_{annual,clim}.nc`.
+
+| | Week 4 fixed SST | relaxed slab (2001–10) | Q-flux control (2020–39) |
+|---|---|---|---|
+| tas (K) | 287.95 | 288.38 | 288.28 |
+| TOA net (W m-2) | +4.95 | +5.75 | +5.46 |
+| pr (mm/day) | 2.92 | 2.98 | 2.97 |
+| ocean SST − climatology (K) | 0 (prescribed) | +0.19 | +0.04 |
+| sea-ice area NH / SH (10⁶ km²) | | 5.4 / 8.7 | 6.3 / 10.1 |
+
+![Drift of the Q-flux control](figures/week5_qflux_control_drift.png)
+
+- **Drift:** with the relaxation removed, the ocean cools 0.14 K relative to the relaxed run, with an e-folding time of 4.5 years.
+  The cooling is mostly poleward of 40°, and sea ice grows by about 16% in each hemisphere (ice-albedo feedback). After about 2010
+  the run is steady: TOA has no significant trend, and NH ice has ±0.4 million km² decadal swings with no clear direction.
+- **Q-flux:** the ocean mean is −13.4 W m-2 (−4.9 PW), a sink that balances SPEEDY's TOA imbalance. With the mean removed,
+  the implied transport is 1.1 PW northward at 17°N but runs equatorward near 45°N/S. So it is a flux correction for
+  SPEEDY's surface-flux biases, not a realistic ocean heat transport.
+- **Annual bias:** too warm in the equatorial cold tongues (+1 to +2 K) and too cold south of the Kuroshio and Gulf Stream
+  and at 40–60°S. The relaxed run has the same pattern.
+- **Seasonal cycle:** the range is too large by 1.6 K on average (up to 2.5 K at 40°N and 30°S). The relaxed run has the
+  same excess. A fixed 40–60 m mixed layer under SPEEDY's seasonal fluxes produces a larger cycle, and τ = 30 days does not
+  hold it back. Possible fix: derive Q from a stronger relaxation, or from fixed-SST surface fluxes.
+
+![Annual-mean bias](figures/week5_qflux_control_bias.png)
+![Seasonal range](figures/week5_qflux_control_seasonal.png)
+
+**For Task 3:**
+- Branch from the control's final checkpoint (2040-01-01, 14 MB; ask annalyellis) and use 2020–2039 as the baseline.
+- Land is relaxed to climatology with `tdland = 1 day` in earth-slab (SPEEDY default: 40 days), so it is effectively
+  prescribed and will hardly warm under CO2.
+- Check that a restored checkpoint uses the new `co2` and does not keep 420 ppmv.
 
 ### JCM / JEM on NRP (Weeks 4–6)
 

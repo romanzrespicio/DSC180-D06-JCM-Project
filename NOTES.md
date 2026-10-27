@@ -22,6 +22,36 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-27 — Week 5 Task 2: Q-flux slab control (annalyellis)
+- Asked: Claude Code to derive a Q-flux from a relaxed slab run on Week 4's boundary conditions, run the Q-flux
+  control for 40 years on the laptop, and report its drift against the Week 4 SST.
+- Changed:
+  - New scripts: `nrp/make_slab_bc.py`, `nrp/run_slab.py`, `nrp/make_qflux.py`, `nrp/summarize_slab.py`.
+  - `nrp/extract_jem.py`: split into `select`/`combine` so `run_slab.py` can reuse it; the CLI is unchanged.
+  - Also: `results/w5-task2_*.nc`, `notebooks/Week5_QfluxControl.ipynb`, `figures/week5_qflux*.png`, README Week 5 Task 2.
+  - The runs use calendar-month means from `jem.accumulate.monthly_mean` (not `long_run`'s 30-day windows).
+  - The Q-flux is computed exactly from the slab's implicit relaxation step.
+- Checked:
+  - Week 4 `ts` equals the slab's SST target to 0.09 K in all-ocean, ice-free cells, month by month. jcm and jem both
+    place monthly records at month starts, which answers Task 1's half-month-lag question.
+  - In a test run, the Q-flux the slab applied equals the file's interpolation to 4e-5 W m-2, so the splice of the
+    relaxed state with the Q-flux ocean params works.
+  - Energy: TOA +5.4 W m-2 ≈ ocean-fraction × surface uptake (9.3 W m-2). Q (−13.4) differs from the uptake only in ice
+    cells, where the freezing clamp adds heat.
+  - e-folding time 4.5 yr, within Task 1's estimate of 3–6 yr.
+- AI got wrong / nearly wrong:
+  - The first ocean mask had all 4608 cells as ocean, because the accumulator's empty months are NaN and NaN != 0.
+    Caught by an assert on the cell count.
+  - `open_mfdataset` stacked `ocean_mask` along time and crashed `make_qflux.py`; fixed with `data_vars="minimal"`.
+  - The Week 4 row of the comparison first read TOA +9.2 W m-2. `w4-control_monthly.nc` latitudes differ from the
+    slab files' by 1e-13, and xarray silently aligned on the few exact matches. Caught by comparison with the README's +4.9.
+  - The first implied-OHT curve did not remove Q's −13 W m-2 mean and showed 5 PW at the North Pole.
+  - Claude first said Q and the mean surface flux "should agree"; they differ by the freezing-clamp heat.
+- Open questions:
+  - Why is the slab's `tas` 0.33 K warmer than Week 4 at almost the same SST?
+  - Should Q come from stronger relaxation, to fix the 40% too-large seasonal cycle?
+  - Land with `tdland = 1 day` will barely warm in Task 3. Does a restored checkpoint keep 420 ppmv CO2?
+
 ## 2026-10-26 — Week 5 Task 1: first slab-ocean runs (coltranegowan)
 - Asked: Claude Code to run the JEM aquaplanet and Earth-like slab configurations, read `SlabOceanModel`, and
   answer what sets the mixed-layer depth and what a Q-flux is.
