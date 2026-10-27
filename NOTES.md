@@ -22,6 +22,26 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-10-26 — Week 5 Task 1: first slab-ocean runs (coltranegowan)
+- Asked: Claude Code to run the JEM aquaplanet and Earth-like slab configurations, read `SlabOceanModel`, and
+  answer what sets the mixed-layer depth and what a Q-flux is.
+- Changed: `nrp/extract_jem.py`, `results/w5-task1_{aquaplanet,earth}.nc`, `notebooks/Week5_SlabOcean.ipynb`,
+  `figures/week5_*.png`, README Week 5 section. Both runs: 360 days on the laptop CPU (the quick start is 2 days only).
+- Checked:
+  - The mixed-layer depth in the output equals `60 + (40 − 60) cos³(lat)` to 2e-5 m and does not change in time.
+  - Aquaplanet energy budget: TOA +11 W m-2 on an all-ocean planet with C = 1.97e8 J m-2 K-1 gives 1.8 K/yr;
+    the measured SST rise is 1.8 K/yr.
+  - Relaxed run: the relaxation heat flux from the SST bias and from the slab budget (C dT/dt + F_up) agree
+    (−12.7 vs −14.9 W m-2, pattern correlation 0.92), which confirms the sign of `total_heat_flux` (upward positive).
+  - The ocean mask from the output (`frzmlt != 0`) equals `lsm < 0.5` in the terrain file at every cell.
+  - earth-slab TOA imbalance (+4.9 W m-2) equals the Week 4 fixed-SST control.
+- AI got wrong / nearly wrong (Question 4):
+  - The first extraction assumed the slab writes 0 K over land; it writes 288.15 K (`MASKED_SURFACE_TEMPERATURE`),
+    which would have biased every ocean mean. Caught by the 290 K global mean in a test on the 2-day run.
+- Open questions: jem places monthly climatology records at the start of each month (year fraction k/12), so relaxation
+  and Q-flux targets lag by about half a month. Does this matter for the Task 2 Q-flux? earth-slab uses jcm's older T30
+  climatology, not Week 4's `forcing_pd.nc`; the Q-flux control should use the Week 4 one.
+
 ## 2026-10-25 — Week 4 Tasks 4–5: control vs ERA5/NorESM2, TOA variability (annalyellis)
 - Asked: Claude Code to evaluate the control climatology (Task 4) and its TOA variability (Task 5)
   without Casper, on a laptop.

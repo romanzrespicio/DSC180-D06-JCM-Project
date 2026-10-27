@@ -19,6 +19,60 @@ python check_env.py --gpu
 
 `jax.devices()` should print something like `[CudaDevice(id=0)]`.
 
+## Week 5: slab ocean
+
+Status: Task 1 is done (coltranegowan).
+
+### Task 1: first coupled runs
+
+Notebook: [notebooks/Week5_SlabOcean.ipynb](notebooks/Week5_SlabOcean.ipynb) (kernel `jcm-model`, runs on a laptop).
+Figures: `figures/week5_*.png`.
+
+- The quick start `python -m jem.main +configuration=aquaplanet-slab coupled_run=short_run` (2 days) and the same
+  command with `+configuration=earth-slab` both run in about 14 s on an M2 CPU.
+- For the analysis, both configurations ran for 360 days on the laptop (12 min each), with
+  `coupled_run=long_run coupled_run.total_time="360 days"`. Output records are 30-day-window means.
+  [nrp/extract_jem.py](nrp/extract_jem.py) combines the per-chunk files into
+  `results/w5-task1_aquaplanet.nc` and `results/w5-task1_earth.nc` (1.6 MB each; ocean fields are NaN over land).
+- Both runs use CO2 = 420 ppmv and start from an isothermal atmosphere. The first 30 days are spin-up.
+
+| | aquaplanet-slab | earth-slab |
+|---|---|---|
+| Ocean | free slab (`forcing_method: none`) | slab relaxed to SST climatology, τ = 30 days |
+| Land / sea ice | none / slab | SPEEDY slab land / slab |
+| Boundary file | none (idealized SST start, 288–298 K) | jcm's packaged `bc/t30/clim/forcing.nc` (not Week 4's `forcing_pd.nc`) |
+| TOA net, days 30–360 | +11.1 W m-2 | +4.9 W m-2 (Week 4 control: +4.9) |
+| Ocean-mean SST | 293.6 → 295.1 K, still warming | steady within 0.6 K |
+
+![Global means over the first year](figures/week5_global_timeseries.png)
+
+The aquaplanet energy budget closes: +11 W m-2 into a slab with C = 1.97×10⁸ J m-2 K-1 predicts 1.8 K/yr, and the
+measured SST rise is 1.8 K/yr. With no ocean heat transport, the equator-to-pole SST difference grows from 10 K to about 25 K:
+
+![Aquaplanet zonal-mean SST and precipitation](figures/week5_aquaplanet_zonal.png)
+
+**The slab equation** (`SlabOceanModel`): ρ c_p h · dT/dt = −F_up + (Q-flux or relaxation term). The only state is the SST;
+F_up is the net surface heat flux, upward positive.
+
+**What sets the mixed-layer depth?** Two parameters only: `h = 60 + (40 − 60)·cos³(lat)` m
+(`mixed_layer_depth_min`/`_max` in `SlabOceanParameters`). It does not respond to winds, buoyancy or the seasons.
+Heat capacity ρ·c_p·h ≈ 2.0×10⁸ J m-2 K-1 (global-mean h = 48 m); with λ = 1–2 W m-2 K-1, the e-folding time is 3–6 years.
+
+![Slab mixed-layer depth](figures/week5_mld.png)
+
+**What does a Q-flux represent?** A prescribed, seasonally varying heat source in each column of the slab: the convergence
+of ocean heat transport (currents, upwelling, exchange with the deep ocean) that a motionless slab cannot calculate,
+plus a correction for the model's surface-flux biases. The relaxed earth-slab run shows the Q-flux that SPEEDY would need:
+heat out at the equator (−39 W m-2 zonal mean, below −100 W m-2 in the east Pacific), heat in along the Gulf Stream and near 40°S,
+global mean about −13 W m-2 over ice-free ocean. Two independent estimates (from the SST bias and from the slab's energy budget) agree
+(pattern correlation 0.92).
+
+![SST bias and relaxation heat flux](figures/week5_earth_relaxation.png)
+
+**For Task 2:** jem ships no Q-flux file (`ocean/slab_qflux.yaml` has `q_flux_file: ???`), and a relaxed slab cannot warm
+under CO2 (it is pulled back with τ = 30 days). Plan: run a relaxed control on Week 4's `forcing_pd.nc` SST/sea ice,
+calculate a monthly `qflux` climatology from it with calendar-month bins (`jem.accumulate.monthly_mean`), then run the Q-flux control.
+
 ### JCM / JEM on NRP (Weeks 4–6)
 
 The DataHub GPU does not work for us, so we run JCM on the NRP JupyterHub
@@ -195,3 +249,4 @@ Same notebook, section 7. Annual global-mean net TOA flux, 2001–2010: SD **0.1
   folder is 5 GB.
 - **Read the vertical-grid note in Task 4 first:** SPEEDY's CO2 absorption acts through the top layers, and the
   control's layers are not SPEEDY's.
+
