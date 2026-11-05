@@ -2,6 +2,49 @@
 
 Team repo. Decision log is in [NOTES.md](NOTES.md).
 
+## Overview
+
+DSC 180A Phase I: differentiable climate emulation in JAX (mentor: Duncan Watson-Parris). Team: Coltrane Gowan,
+Roman Respicio, Annaly Ellis, Linus Lee. The project has three parts:
+
+1. **Reproduce ClimateBench** (Weeks 1–3): four emulators of NorESM2-LM, scored on `ssp245`.
+2. **Run a climate model** (Weeks 4–7): JCM with SPEEDY physics. Fixed-SST control and CO2 forcing, then a slab ocean
+   (JEM) for abrupt CO2 runs and the climate sensitivity. Weeks 6–7 (`jax.grad`, parameter ensemble) are not done yet.
+3. **A differentiable ClimateBench emulator in JAX** (Weeks 8–10): not started.
+
+### Data
+
+- **ClimateBench:** download the processed dataset from Zenodo (see the ClimateBench paper,
+  <https://doi.org/10.1029/2021MS002954>) and unpack the `inputs_*.nc` and `outputs_*.nc` files into
+  `~/data/climatebench/`. All Part 1 notebooks read from there.
+- **ERA5 and NorESM2 references (Week 4):** `week4/get_obs.py` builds them. See Week 4, Task 4 below.
+- **Model output:** the small processed files are in `results/` (in git). The JCM run folders are not in git.
+
+### Run order
+
+Run the notebooks from the `notebooks/` folder. Kernels: `jcm` = [environment.yml](environment.yml),
+`jcm-gp` = [environment-gp.yml](environment-gp.yml), `jcm-model` = [nrp/requirements.txt](nrp/requirements.txt).
+
+| Part | Step | Code | Kernel | Output |
+|---|---|---|---|---|
+| 1 | Data exploration | `notebooks/Week1_Tasks.ipynb` | `jcm` | `figures/task*.png` |
+| 1 | Pattern scaling | `notebooks/Week3_PatternScaling.ipynb` (JAX version: `Week3_PatternScaling_JAX.ipynb`) | `jcm` | `results/pattern_scaling*_ssp245.nc` |
+| 1 | Gaussian process | `notebooks/Week3_GaussianProcess.ipynb` | `jcm-gp` | `results/gp_ssp245*.nc` |
+| 1 | Random forest | `notebooks/Week3_RandomForest.ipynb` | `jcm` | `results/rf_ssp245.nc` |
+| 1 | CNN-LSTM | `notebooks/Week3_CNN-LTSM.ipynb` | needs TensorFlow | `~/data/climatebench/outputs_ssp245_predict_*.nc` (1) |
+| 1 | Leaderboard | `notebooks/Week3_Leaderboard.ipynb`, then `Week3_Presentation.ipynb` | `jcm` | `results/leaderboard.csv` |
+| 2 | JCM setup and throughput (NRP GPU) | `nrp/setup_jcm.sh`, `nrp/throughput.py` | `jcm-model` | `results/throughput_*.json` |
+| 2 | Control run | Week 4, Task 3 below; `nrp/extract_monthly.py` | `jcm-model` | `results/w4-control_monthly.nc` |
+| 2 | Control vs ERA5 and NorESM2 | `week4/get_obs.py`, `notebooks/Week4_Evaluation.ipynb` | `jcm` | `figures/week4_*.png` |
+| 2 | CO2 forcing (ERF), NRP GPU | `week4/task 6 and 7.ipynb` | `jcm-model` | in the notebook |
+| 2 | First slab runs | `notebooks/Week5_SlabOcean.ipynb` | `jcm-model` | `results/w5-task1_*.nc` |
+| 2 | Q-flux control | `nrp/make_slab_bc.py` → `run_slab.py relax` → `make_qflux.py` → `run_slab.py qflux` → `summarize_slab.py`; `notebooks/Week5_QfluxControl.ipynb` | `jcm-model` | `results/w5-task2_*.nc` |
+| 2 | Abrupt CO2, Gregory, ECS | `nrp/make_slab_co2.py`, `run_slab.py qflux --branch`; `notebooks/Week5_CO2Runs.ipynb` | `jcm-model` | `results/w5-task3_*.nc` |
+| 2 | Warming patterns vs NorESM2 | `notebooks/Week5_WarmingPatterns.ipynb` | `jcm` | in the notebook |
+
+(1) The leaderboard reads `results/CNN-LSTM_ssp245.nc`. The notebook writes one file per variable, and the step that
+combines them into that file is not in the repo yet.
+
 ## Environment
 
 ```bash

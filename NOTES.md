@@ -22,6 +22,20 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-05 — Checkpoint: README overview and notebook paths (coltranegowan)
+- Asked: Claude Code to make the repo runnable by someone else for the Nov 6 checkpoint.
+- Changed:
+  - README: overview of the three parts, data location, and a run-order table (notebook/script, kernel, output).
+  - `notebooks/Week3_CNN-LTSM.ipynb`: `from utils import data_path` failed (no `utils.py` in the repo). Now
+    `data_path = ~/data/climatebench/`, the same folder as the other Week 3 notebooks.
+  - `notebooks/Week1_Tasks.ipynb`: figures path was `~/DSC180-D06-JCM-Project/figures`; now `../figures`.
+  - Deleted `D06 Week 4 Check-in.pdf` (a submission, not code).
+- Checked: from `notebooks/`, the new paths find the ClimateBench files and `figures/`. Every `results/` file
+  that the README table names exists. The notebooks were not rerun.
+- Open questions: the CNN-LSTM notebook writes one file per variable to the data folder, but the leaderboard reads
+  `results/CNN-LSTM_ssp245.nc`. The step that combines them is not in the repo. `Week5_WarmingPatterns.ipynb` saves
+  `figures/week5_task6_*.png`, but those files are not in git.
+
 ## 2026-10-27 — Week 5 Task 2: Q-flux slab control (annalyellis)
 - Asked: Claude Code to derive a Q-flux from a relaxed slab run on Week 4's boundary conditions, run the Q-flux
   control for 40 years on the laptop, and report its drift against the Week 4 SST.
