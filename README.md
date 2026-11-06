@@ -9,7 +9,7 @@ Roman Respicio, Annaly Ellis, Linus Lee. The project has three parts:
 
 1. **Reproduce ClimateBench** (Weeks 1–3): four emulators of NorESM2-LM, scored on `ssp245`.
 2. **Run a climate model** (Weeks 4–7): JCM with SPEEDY physics. Fixed-SST control and CO2 forcing, then a slab ocean
-   (JEM) for abrupt CO2 runs and the climate sensitivity. Weeks 6–7 (`jax.grad`, parameter ensemble) are not done yet.
+   (JEM) for abrupt CO2 runs and the climate sensitivity. Week 6 (gradients of JCM) is in progress: Task 5 is done. Week 7 (parameter ensemble) is not done yet.
 3. **A differentiable ClimateBench emulator in JAX** (Weeks 8–10): not started.
 
 ### Data
@@ -41,6 +41,7 @@ Run the notebooks from the `notebooks/` folder. Kernels: `jcm` = [environment.ym
 | 2 | Q-flux control | `nrp/make_slab_bc.py` → `run_slab.py relax` → `make_qflux.py` → `run_slab.py qflux` → `summarize_slab.py`; `notebooks/Week5_QfluxControl.ipynb` | `jcm-model` | `results/w5-task2_*.nc` |
 | 2 | Abrupt CO2, Gregory, ECS | `nrp/make_slab_co2.py`, `run_slab.py qflux --branch`; `notebooks/Week5_CO2Runs.ipynb` | `jcm-model` | `results/w5-task3_*.nc` |
 | 2 | Warming patterns vs NorESM2 | `notebooks/Week5_WarmingPatterns.ipynb` | `jcm` | in the notebook |
+| 2 | Week 6 Task 5: Sahel rain sensitivity to SST | `notebooks/Week6_Task5_SahelRain.ipynb` | `jcm-model` | `results/w6-task5_sahel.nc`, `figures/week6_task5_*.png` |
 
 (1) The leaderboard reads `results/CNN-LSTM_ssp245.nc`. The notebook writes one file per variable, and the step that
 combines them into that file is not in the repo yet.
@@ -61,6 +62,27 @@ python check_env.py --gpu
 ```
 
 `jax.devices()` should print something like `[CudaDevice(id=0)]`.
+
+## Week 6: differentiating JCM
+
+Status: Task 5 is done (romanzrespicio). Tasks 1–4 are not done yet.
+
+### Task 5: Sahel rainfall sensitivity to SST (option "a regional target")
+
+Notebook: [notebooks/Week6_Task5_SahelRain.ipynb](notebooks/Week6_Task5_SahelRain.ipynb) (kernel `jcm-model`,
+about 5 min on an M-series laptop CPU, no GPU needed). It uses the Task 3 setup from the course page (T30, 60-day
+spin-up, `time_step=30`) with J changed to Sahel-mean rainfall (10N–20N, 20W–40E, from
+`surface_exchange.precipitation`, in mm/day). Windows of 6 h, 1 day and 2 days.
+
+- Forward mode: 1 K of uniform ocean warming lowers Sahel rain by 0.0027 / 0.015 / 0.028 mm/day (6 h / 1 d / 2 d).
+  Finite differences (h = 1 K and 0.1 K) have the same sign but are mostly 1.3–2.9x larger and depend on h,
+  which points to the convection and condensation switches.
+- Dot-product test: `sum(map * pattern)` matches `jax.jvp` within 0.4% (uniform), 0.1% (off Senegal) and
+  3% (Gulf of Guinea).
+- Map: almost all the sensitivity is on the West African coast just south and west of the box. The alternating
+  stripes elsewhere look like T31 spectral ringing, not teleconnections.
+- Output: `results/w6-task5_sahel.nc` (maps per window, not divided by area weights, plus the scalar results),
+  `figures/week6_task5_sahel_maps.png`, `week6_task5_sahel_zoom.png`, `week6_task5_grad_vs_fd.png`.
 
 ## Week 5: slab ocean
 
