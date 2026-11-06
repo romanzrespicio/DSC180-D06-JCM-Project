@@ -22,6 +22,41 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-06 — Week 6 Task 2: LEAP JCM notebook, drier soil (annalyellis)
+- Asked: Claude Code to run sections 1–2b of LEAP's `01_jcm_sensitivities.ipynb` on our JCM and explain why the
+  forward-mode estimate (2b) and the finite difference (2a) differ in size.
+- Changed: `notebooks/Week6_Task2_SoilMoisture.ipynb`, `figures/week6_task2_*.png`, `results/w6-task2_soil.nc`,
+  README Week 6 Task 2. One rename for JCM 3.0: `surface_flux.evap.0` → `surface_flux.evap`.
+- Checked:
+  - `model.run` keeps no state between calls: a 6-hour run gives identical output before and after a 7-day run on
+    the same model object, and on a fresh one. So 2a's runs both start from rest on 1 January.
+  - The shared jvp function reproduces 2b to 1e-9 (float32 round-off; values up to 8e-4).
+  - Mechanism tested, not assumed: with `lskineb = False` the 50% drying ratio goes from 1.28 to 1.015.
+  - Hinge cells counted from the gradient itself (exactly 0) and their share of the gap computed.
+- AI got wrong / nearly wrong:
+  - Predicted the evaporation hinge would explain the 2a/2b gap. It explains 0.3% from rest; the skin-temperature
+    balance explains it. The hinge only matters from a spun-up state, and only on the wetting side.
+  - First check of the shared function against 2b used `atol=1e-12` and reported "False" for a 1e-9 float32 difference.
+  - The hinge category map first drew the red cells grey (the colormap was stretched over 0–1 because no cell had
+    the value 2). Caught by comparing the map with the printed counts.
+  - The first pattern correlation of 2a with the 7-day jvp came out −0.77: it compared a drying response with a
+    wetting tangent. Corrected to +0.77.
+- Open questions: does `evap_smoothing > 0` close the hinge gap from the spun-up start? Only one start date (1 Jan).
+
+## 2026-11-06 — Week 6 Task 1: gradients of an energy-balance model (annalyellis)
+- Asked: Claude Code to work through LEAP chapter 1.2 (grad/jvp/vjp on a grey-body EBM, the finite-difference
+  check, the three exercises) and explain why forward and reverse mode agree and why the FD error falls then rises.
+- Changed: `notebooks/Week6_Task1_EBM.ipynb`, `figures/week6_task1_fd_error.png`, README Week 6 Task 1. Added a
+  float32 version of the FD error plot (the chapter only shows float64), because JCM runs in float32.
+- Checked:
+  - grad, jvp and vjp equal the closed forms for dT/dα, dT/dε and d²T/dα² (to 1e-16 relative or better).
+  - The float64 central-difference errors equal the chapter's table to 3 digits at all five step sizes.
+  - Best FD steps match the error model: ε^(1/3) central, √ε one-sided, in both precisions.
+- AI got wrong / nearly wrong:
+  - The first draft said float32 FD collapses to 0 below "6e-8"; the float32 spacing at 0.30 is 3e-8, so it is
+    1.5e-8 (half the spacing). Corrected against the plot.
+- Open questions: none.
+
 ## 2026-11-05 — Checkpoint: README overview and notebook paths (coltranegowan)
 - Asked: Claude Code to make the repo runnable by someone else for the Nov 6 checkpoint.
 - Changed:

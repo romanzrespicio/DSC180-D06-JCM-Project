@@ -9,7 +9,7 @@ Roman Respicio, Annaly Ellis, Linus Lee. The project has three parts:
 
 1. **Reproduce ClimateBench** (Weeks 1–3): four emulators of NorESM2-LM, scored on `ssp245`.
 2. **Run a climate model** (Weeks 4–7): JCM with SPEEDY physics. Fixed-SST control and CO2 forcing, then a slab ocean
-   (JEM) for abrupt CO2 runs and the climate sensitivity. Week 6 (gradients of JCM) is in progress: Task 5 is done. Week 7 (parameter ensemble) is not done yet.
+   (JEM) for abrupt CO2 runs and the climate sensitivity. Week 6 (gradients of JCM) is in progress: Tasks 1, 2 and 5 are done. Week 7 (parameter ensemble) is not done yet.
 3. **A differentiable ClimateBench emulator in JAX** (Weeks 8–10): not started.
 
 ### Data
@@ -41,6 +41,8 @@ Run the notebooks from the `notebooks/` folder. Kernels: `jcm` = [environment.ym
 | 2 | Q-flux control | `nrp/make_slab_bc.py` → `run_slab.py relax` → `make_qflux.py` → `run_slab.py qflux` → `summarize_slab.py`; `notebooks/Week5_QfluxControl.ipynb` | `jcm-model` | `results/w5-task2_*.nc` |
 | 2 | Abrupt CO2, Gregory, ECS | `nrp/make_slab_co2.py`, `run_slab.py qflux --branch`; `notebooks/Week5_CO2Runs.ipynb` | `jcm-model` | `results/w5-task3_*.nc` |
 | 2 | Warming patterns vs NorESM2 | `notebooks/Week5_WarmingPatterns.ipynb` | `jcm` | in the notebook |
+| 2 | Week 6 Task 1: gradients of an energy-balance model | `notebooks/Week6_Task1_EBM.ipynb` | `jcm` | `figures/week6_task1_fd_error.png` |
+| 2 | Week 6 Task 2: LEAP notebook, drier soil (jvp vs finite difference) | `notebooks/Week6_Task2_SoilMoisture.ipynb` | `jcm-model` | `results/w6-task2_soil.nc`, `figures/week6_task2_*.png` |
 | 2 | Week 6 Task 5: Sahel rain sensitivity to SST | `notebooks/Week6_Task5_SahelRain.ipynb` | `jcm-model` | `results/w6-task5_sahel.nc`, `figures/week6_task5_*.png` |
 
 (1) The leaderboard reads `results/CNN-LSTM_ssp245.nc`. The notebook writes one file per variable, and the step that
@@ -65,7 +67,46 @@ python check_env.py --gpu
 
 ## Week 6: differentiating JCM
 
-Status: Task 5 is done (romanzrespicio). Tasks 1–4 are not done yet.
+Status: Tasks 1–2 are done (annalyellis). Task 5 is done (romanzrespicio). Tasks 3–4 are not done yet.
+
+### Task 1: warm-up on an energy-balance model (LEAP chapter 1.2)
+
+Notebook: [notebooks/Week6_Task1_EBM.ipynb](notebooks/Week6_Task1_EBM.ipynb) (kernel `jcm`, a few seconds). The model is
+the chapter's grey-body balance T = [S0(1−α)/(4εσ)]^¼, with α = 0.30 and ε = 0.61 (T = 288.07 K).
+
+- `jax.grad`, `jax.jvp` and `jax.vjp` give dT/dα = −102.88 K per unit albedo, identical to each other and to the closed
+  form −T/[4(1−α)] (1e-16 relative). Both modes apply the chain rule exactly to the same Jacobian and only multiply
+  its factors in a different order.
+- The finite-difference error falls with h (truncation, ∝ h² central) and then rises (round-off, ∝ ε/h). Best central
+  step: h ≈ 4e-6 in float64 (2e-11 relative error), h ≈ 2e-3 in float32 (6e-6 relative), close to ε^(1/3) in each.
+  The float64 errors reproduce the chapter's table exactly.
+- Exercises: dT/dε = −118.1 K; d²T/dα² = −110.2 K (concave, so a linear gradient underestimates the cooling from
+  +0.10 of albedo by 6%); `jax.jacfwd` and `jax.jacrev` give both partials at once.
+
+![Finite-difference error vs step size](figures/week6_task1_fd_error.png)
+
+### Task 2: LEAP hackathon notebook, sections 1–2b (drier soil)
+
+Notebook: [notebooks/Week6_Task2_SoilMoisture.ipynb](notebooks/Week6_Task2_SoilMoisture.ipynb) (kernel `jcm-model`,
+about 2 min on a laptop CPU). Sections 1–2b of LEAP's
+[`01_jcm_sensitivities.ipynb`](https://github.com/leap-stc/diff-earth/blob/main/2026_hackathon/notebooks/01_jcm_sensitivities.ipynb)
+run on our JCM after one rename (`surface_flux.evap.0` → `surface_flux.evap`), followed by experiments that change one
+thing at a time. All runs start from rest on 1 January. Land means are cos(lat)-weighted over cells with land fraction > 0.5.
+
+- 2a (halve soil moisture, 7 days) ÷ 50 is 1.23× 2b (jvp for 1% drying, 6 h) in the land mean; map correlation 0.62.
+  They differ because 2a uses a 50% step over 7 days, while 2b is an infinitesimal step over 6 hours.
+- **Step size (main effect).** At 6 h, central 1% differences match the jvp to 1%, but halving gives 1.28× the linear
+  prediction. Evaporation is concave in soil moisture because of the skin-temperature energy balance: drier soil warms
+  the skin, which restores about 80% of the direct drop at 6 h. With `lskineb = False` the response is linear (1.015×).
+  The evaporation hinge max(0, w·qsat − q) explains only 0.3% of the gap from this start.
+- **Window.** The jvp per 1% falls 10% from 6 h to 7 days (1.23 ≈ 1.37 × 0.90). The 1% finite-difference map matches
+  the jvp map with correlation ≥ 0.90 up to 4 days and 0.33 at 7 days (chaos).
+- **Switches.** Starting from a spun-up state (day 7), 300 land cells have zero gradient (hinge closed). Wetting by 1%
+  switches evaporation on in them, which gives a finite difference 1.30× the jvp on the wetting side.
+- float32 round-off shows at h = 0.001 (2–3% error), as Task 1 predicts.
+
+![Finite difference vs gradient against step size](figures/week6_task2_step_size.png)
+
 
 ### Task 5: Sahel rainfall sensitivity to SST (option "a regional target")
 
