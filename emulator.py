@@ -1,27 +1,24 @@
 """A differentiable ClimateBench emulator in JAX (Week 7, Task 1).
 
-A pattern-scaling hybrid, built from Week3_PatternScaling_JAX.ipynb:
+Pattern scaling driven by a lagged linear model of global-mean warming, built from Week3_PatternScaling_JAX.ipynb:
 
-    forcing            F_ghg = c_co2 * CO2 + c_ch4 * lag(CH4, tau_ch4)
-                       F_aer = so2_pc @ w_so2 + bc_pc @ w_bc
-    two-box response   R(F) = (1 - f) lag(F, tau_fast) + f lag(F, tau_slow)       (as in FaIR)
-    global-mean core   T_ghg = R(F_ghg),  T_aer = R(F_aer)
-    patterns           tas(cell) = a + b_ghg * T_ghg + b_aer * T_aer
+    inputs        x = [CO2, CH4, so2_pc, bc_pc] / scale
+    global core   T = c0 + c . lag(x, tau)                 lag(x)(t) = a lag(x)(t-1) + (1 - a) x(t), a = exp(-1/tau)
+    patterns      tas(cell) = a_cell + b_cell * T
 
-Both forcings share one thermal response (a fast and a slow box); CH4 also has its own lag because
-the input is emissions, not concentration. CO2 needs no extra lag: its input is already cumulative.
-With n_box=1 there is only the fast box (f = 0).
+so2_pc and bc_pc project the SO2 and BC emission maps on their first N_EOF EOFs, so the emulator sees the full maps
+and jax.grad with respect to SO2 is a map. The core is a closed-form least-squares fit to the global-mean tas of the
+training scenarios; the patterns are a per-cell least-squares fit on [1, T] over the same years.
 
-so2_pc and bc_pc are the first N_EOF principal components of the SO2 and BC emission maps, so the
-emulator sees the full maps and jax.grad with respect to SO2 is a map. The core (coefficients and
-log tau, slow fraction) is fit with Optax on the global-mean tas of the training scenarios; the patterns are a
-closed-form least-squares fit per grid cell on [1, T_ghg, T_aer].
+All scaling happens inside `emulate`, so it takes the raw ClimateBench inputs and gradients come out in their units:
+CO2 cumulative GtCO2, CH4 GtCH4/yr, SO2 and BC kg m-2 s-1.
 
-All scaling happens inside `emulate`, so it takes the raw ClimateBench inputs and gradients come out
-in their units: CO2 cumulative GtCO2, CH4 GtCH4/yr, SO2 and BC kg m-2 s-1.
+Inputs are full series from 1850: for an SSP, the historical inputs come first (the lag needs the 2014 state).
+`scenario_inputs` builds them, and the SSP years are the last 86 of the output.
 
-Inputs are full series from 1850: for an SSP, the historical inputs come first (the lags need the
-2014 state). `scenario_inputs` builds them, and the SSP years are the last 86 of the output.
+Choices (N_EOF, TAU) were made by holding out each training SSP in turn and scoring its 2080-2100 tas with the
+ClimateBench total; ssp245 was scored only once the choice was made. See NOTES.md (2026-11-12) for the comparison,
+including the earlier Optax-fitted two-component version, which scored worse.
 """
 import os
 
@@ -29,12 +26,12 @@ import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import numpy as np
-import optax
 import xarray as xr
 
 DATA = os.path.expanduser("~/data/climatebench")
 TRAIN = ["historical", "hist-GHG", "hist-aer", "ssp126", "ssp370", "ssp585"]
-N_EOF = 2          # chosen by leave-one-scenario-out CV over the training scenarios (2, 3, 5 tried; also n_box 1 vs 2)
+N_EOF = 1          # aerosol EOFs per species; held-out-SSP CV: 0 (global mean) 0.564, 1 0.541, 2 0.640
+TAU = 1.0          # lag (years), as in Week 3; CV is flat between 0.5 and 1 and worse above 2
 N_LAT, N_LON = 96, 144
 
 
@@ -80,94 +77,68 @@ def lag(x, tau):
     return jnp.concatenate([x[:1], out])
 
 
-def global_core(core, const, co2, ch4, so2, bc):
-    """Global-mean warming split into its GHG and aerosol parts, each (year,)."""
-    so2_pc = (so2.reshape(len(so2), -1) @ const["so2_eof"].T) / const["so2_sd"]
-    bc_pc = (bc.reshape(len(bc), -1) @ const["bc_eof"].T) / const["bc_sd"]
-    tau_ch4, tau_fast, tau_slow = jnp.exp(core["log_tau"])
-    f = jax.nn.sigmoid(core["logit_slow"]) if "logit_slow" in core else 0.0
+def features(const, co2, ch4, so2, bc):
+    """Scaled, lagged inputs (year, 2 + 2 * N_EOF)."""
+    so2_pc = so2.reshape(len(so2), -1) @ const["so2_eof"].T
+    bc_pc = bc.reshape(len(bc), -1) @ const["bc_eof"].T
+    x = jnp.column_stack([co2, ch4, so2_pc, bc_pc]) / const["scale"]
+    return lag(x, const["tau"])
 
-    def response(F):
-        return (1 - f) * lag(F, tau_fast) + f * lag(F, tau_slow)
 
-    f_ghg = core["c_co2"] * co2 / const["co2_scale"] + core["c_ch4"] * lag(ch4 / const["ch4_scale"], tau_ch4)
-    f_aer = so2_pc @ core["w_so2"] + bc_pc @ core["w_bc"]
-    return response(f_ghg), response(f_aer)
+def global_tas(params, co2, ch4, so2, bc):
+    """Global-mean warming (year,)."""
+    c = params["core"]
+    return c[0] + features(params["const"], co2, ch4, so2, bc) @ c[1:]
 
 
 def emulate_with(params, co2, ch4, so2, bc):
     """tas (year, lat, lon) for raw inputs from 1850. Pure; differentiable in params and inputs."""
-    t_ghg, t_aer = global_core(params["core"], params["const"], co2, ch4, so2, bc)
-    p = params["pattern"]                                  # (3, n_cells): a, b_ghg, b_aer
-    y = p[0] + jnp.outer(t_ghg, p[1]) + jnp.outer(t_aer, p[2])
+    p = params["pattern"]                                  # (2, n_cells): a, b
+    y = p[0] + jnp.outer(global_tas(params, co2, ch4, so2, bc), p[1])
     return y.reshape(-1, N_LAT, N_LON)
 
 
 # ---------------------------------------------------------------- fit
 
 def _eofs(maps, n_eof):
-    """First n_eof EOFs (rows) of the maps and the std of their projections.
+    """First n_eof EOFs (rows) of the maps, or the area-weighted global mean if n_eof == 0.
 
-    No mean is removed, so zero emissions project to zero and give no aerosol warming.
+    No mean is removed, so zero emissions project to zero.
     """
     flat = maps.reshape(len(maps), -1)
-    if n_eof == 0:                                   # one basis map: the area-weighted global mean
-        eof = np.asarray(area_weights()).reshape(1, -1)
-    else:
-        _, _, vt = np.linalg.svd(flat, full_matrices=False)
-        eof = vt[:n_eof]
-    sd = (flat @ eof.T).std(0)
-    return jnp.asarray(eof), jnp.asarray(sd)
+    if n_eof == 0:
+        return area_weights().reshape(1, -1)
+    _, _, vt = np.linalg.svd(flat, full_matrices=False)
+    eof = vt[:n_eof]
+    return jnp.asarray(eof * np.sign(eof.sum(1, keepdims=True)))   # sign: positive emissions -> positive PC
 
 
-def fit(train=TRAIN, n_eof=N_EOF, n_box=1, steps=3000, lr=0.02, verbose=False):
+def fit(train=TRAIN, n_eof=N_EOF, tau=TAU):
     """Fit the emulator on the training experiments. Uses no data from experiments outside `train`."""
     inputs = {exp: scenario_inputs(exp) for exp in train}
     keep = {exp: n_years(exp) for exp in train}
     tas = {exp: jnp.asarray(load_tas(exp).values.reshape(keep[exp], -1)) for exp in train}
     w = area_weights().ravel()
-    gmt = {exp: tas[exp] @ w for exp in train}
+    gmt = jnp.concatenate([tas[exp] @ w for exp in train])
 
-    # input scaling and aerosol EOFs from the training inputs (each experiment's own years)
+    # EOFs and input scaling from the training inputs (each experiment's own years)
     own = lambda i: np.concatenate([np.asarray(inputs[e][i][-keep[e]:]) for e in train])
-    const = {"co2_scale": float(own(0).std()), "ch4_scale": float(own(1).std())}
-    for name, i in [("so2", 2), ("bc", 3)]:
-        const[f"{name}_eof"], const[f"{name}_sd"] = _eofs(own(i), n_eof)
+    const = {"so2_eof": _eofs(own(2), n_eof), "bc_eof": _eofs(own(3), n_eof), "tau": tau,
+             "scale": jnp.ones(2 + 2 * max(n_eof, 1))}
+    unscaled = jnp.concatenate([features(const, *inputs[e])[-keep[e]:] for e in train])  # lag is linear, so
+    const["scale"] = unscaled.std(0)                                                       # rescaling commutes
 
-    def predict_gmt(core, exp):
-        t_ghg, t_aer = global_core(core, const, *inputs[exp])
-        return (t_ghg + t_aer)[-keep[exp]:]
+    # global core: least squares on [1, lagged features]
+    X = jnp.concatenate([features(const, *inputs[e])[-keep[e]:] for e in train])
+    core, *_ = jnp.linalg.lstsq(jnp.column_stack([jnp.ones(len(X)), X]), gmt)
 
-    def loss(core):
-        err = jnp.concatenate([predict_gmt(core, e) - gmt[e] for e in train])
-        return jnp.mean(err ** 2)
-
-    core = {"c_co2": 0.5, "c_ch4": 0.1, "w_so2": jnp.zeros(max(n_eof, 1)), "w_bc": jnp.zeros(max(n_eof, 1)),
-            "log_tau": jnp.log(jnp.array([10.0, 4.0, 50.0]))}         # tau_ch4, tau_fast, tau_slow
-    if n_box == 2:
-        core["logit_slow"] = 0.0
-    core = jax.tree.map(jnp.asarray, core)
-    opt = optax.adam(lr)
-    state = opt.init(core)
-
-    @jax.jit
-    def step(core, state):
-        value, g = jax.value_and_grad(loss)(core)
-        updates, state = opt.update(g, state)
-        return optax.apply_updates(core, updates), state, value
-
-    for i in range(steps):
-        core, state, value = step(core, state)
-        if verbose and i % 500 == 0:
-            print(f"step {i:5d}  global-mean MSE {float(value):.5f}")
-
-    # patterns: per-cell least squares on [1, T_ghg, T_aer] over all training years
-    parts = [global_core(core, const, *inputs[e]) for e in train]
-    A = jnp.concatenate([jnp.stack([jnp.ones(keep[e]), g[-keep[e]:], a[-keep[e]:]], 1)
-                         for e, (g, a) in zip(train, parts)])
-    Y = jnp.concatenate([tas[e] for e in train])
-    pattern, *_ = jnp.linalg.lstsq(A, Y)
-    return {"core": core, "const": const, "pattern": pattern, "train_loss": float(loss(core))}
+    # patterns: per-cell least squares on [1, T] with the true training global means
+    pattern, *_ = jnp.linalg.lstsq(jnp.column_stack([jnp.ones(len(gmt)), gmt]),
+                                   jnp.concatenate([tas[e] for e in train]))
+    params = {"core": core, "const": const, "pattern": pattern}
+    pred = jnp.concatenate([global_tas(params, *inputs[e])[-keep[e]:] for e in train])
+    params["train_rmse"] = float(jnp.sqrt(jnp.mean((pred - gmt) ** 2)))
+    return params
 
 
 def make_emulator(params):

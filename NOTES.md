@@ -22,6 +22,39 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-12 — Week 7 Task 1: emulator meets the target (annalyellis)
+- Asked: Claude Code to get `emulator.py` (Coltrane's WIP, ssp245 tas Total 0.552) within 20% of the best Week 3
+  emulator (GP 0.299, so ≤ 0.359).
+- Changed: `emulator.py` rewritten in place, same API (`fit`, `make_emulator`, `emulate_with`, `scenario_inputs`).
+  The global core is now a closed-form linear fit on lagged [CO2, CH4, SO2 EOF1, BC EOF1] (τ = 1 yr, with intercept)
+  instead of the Optax-fitted GHG and aerosol responses; patterns are per cell on [1, T]. Fit takes 4 s instead of 12 s.
+- Why the old version missed: its error was mostly global (5 × 0.088), a −0.16 K bias over 2080–2100. Its fit had to
+  match both `historical` and `hist-aer`, which disagree: NorESM is not additive, historical is 0.34 K warmer than
+  hist-GHG + hist-aer over 1995–2014. That traded a −0.15 K historical bias against +0.16 K in hist-aer.
+- How chosen (no ssp245 in the choice): hold out each training SSP in turn, refit on the other 5 experiments, score
+  its 2080–2100 tas with the ClimateBench total. Mean over the 3 folds (lower is better):
+  | variant | CV mean |
+  |---|---|
+  | old emulator.py (2 EOFs, Optax, 1 box) | 0.654 |
+  | old, + GHG×aerosol term / without hist-aer in the core | 0.585–0.796 |
+  | Week 3 EBM (global-mean aerosols) | 0.564 |
+  | **EBM, aerosols as 1 EOF (chosen)** | **0.541** |
+  | EBM, 2 EOFs | 0.640 |
+  | JAX GP on global-mean inputs (linear CO2 + Matérn) | 0.586 |
+  Only the two best (1-EOF EBM, GP) were then scored on ssp245.
+- Checked:
+  - ssp245 tas: Spatial 0.083, Global 0.052, **Total 0.345** (15% above the GP; target met). 2080–2100 bias −0.07 K.
+  - The JAX GP scored 0.291 on ssp245 but was not chosen: it lost the CV, it extrapolates poorly (ssp585 fold 0.41
+    vs 0.31), and picking it for its ssp245 score would be selecting on the test set.
+  - `jax.grad` of the 2080–2100 global mean with respect to the SO2 map agrees with a central finite difference
+    (−173.66 vs −173.66 at one cell).
+  - `fit()` opens no ssp245 file (checked by wrapping `xr.open_dataset`).
+- Open questions:
+  - The margin is thin (0.345 vs 0.359); a different seed of internal variability could cross it.
+  - With 1 EOF, every SO2 sensitivity map has the shape of EOF1, which limits regional gradient studies.
+  - The BC coefficient is negative (cooling); probably collinearity with SO2, not physics.
+  - Notebook and leaderboard row still to do (the leaderboard needs dtr/pr/pr90; this emulator does tas only).
+
 ## 2026-11-06 — Week 6 Task 2: LEAP JCM notebook, drier soil (annalyellis)
 - Asked: Claude Code to run sections 1–2b of LEAP's `01_jcm_sensitivities.ipynb` on our JCM and explain why the
   forward-mode estimate (2b) and the finite difference (2a) differ in size.
