@@ -10,7 +10,7 @@ Roman Respicio, Annaly Ellis, Linus Lee. The project has three parts:
 1. **Reproduce ClimateBench** (Weeks 1–3): four emulators of NorESM2-LM, scored on `ssp245`.
 2. **Run a climate model** (Weeks 4–7): JCM with SPEEDY physics. Fixed-SST control and CO2 forcing, then a slab ocean
    (JEM) for abrupt CO2 runs and the climate sensitivity. Week 6 (gradients of JCM) is in progress: Tasks 1, 2 and 5 are done. Week 7 (parameter ensemble) is not done yet.
-3. **A differentiable ClimateBench emulator in JAX** (Weeks 8–10): not started.
+3. **A differentiable ClimateBench emulator in JAX** (Weeks 7–8): Tasks 1–2 are done.
 
 ### Data
 
@@ -44,6 +44,7 @@ Run the notebooks from the `notebooks/` folder. Kernels: `jcm` = [environment.ym
 | 2 | Week 6 Task 1: gradients of an energy-balance model | `notebooks/Week6_Task1_EBM.ipynb` | `jcm` | `figures/week6_task1_fd_error.png` |
 | 2 | Week 6 Task 2: LEAP notebook, drier soil (jvp vs finite difference) | `notebooks/Week6_Task2_SoilMoisture.ipynb` | `jcm-model` | `results/w6-task2_soil.nc`, `figures/week6_task2_*.png` |
 | 2 | Week 6 Task 5: Sahel rain sensitivity to SST | `notebooks/Week6_Task5_SahelRain.ipynb` | `jcm-model` | `results/w6-task5_sahel.nc`, `figures/week6_task5_*.png` |
+| 3 | Week 7 Tasks 1–2: emulator (`emulator.py`), CO2 gradient and TCRE | `notebooks/Week7_Emulator.ipynb` | `jcm` | `figures/week7_task2_*.png` |
 
 (1) The leaderboard reads `results/CNN-LSTM_ssp245.nc`. The notebook writes one file per variable, and the step that
 combines them into that file is not in the repo yet.
@@ -64,6 +65,26 @@ python check_env.py --gpu
 ```
 
 `jax.devices()` should print something like `[CudaDevice(id=0)]`.
+
+## Week 7: a differentiable ClimateBench emulator
+
+Status: Task 1 is done (annalyellis, from a first version by coltranegowan). Task 2 is done (coltranegowan).
+
+Notebook: [notebooks/Week7_Emulator.ipynb](notebooks/Week7_Emulator.ipynb) (kernel `jcm`, under a minute on a laptop CPU).
+The emulator is [emulator.py](emulator.py): `make_emulator(fit())` returns `emulate(co2, ch4, so2, bc)` -> tas, for raw
+inputs from 1850 (`scenario_inputs(exp)` builds them).
+
+- **Task 1.** ssp245 tas: Spatial 0.083, Global 0.052, Total 0.345, 15% above the best Week 3 emulator (GP 0.299).
+  How the model was chosen is in NOTES.md (2026-11-12).
+- **Task 2.** The effect of one extra GtCO2 on 2081–2100 warming is the same for any year before 2081 and falls to zero
+  across the window. The emulator's TCRE is 0.386 K per 1000 GtCO2 (IPCC likely range 0.27–0.63). A finite difference
+  agrees to 1e-13. NorESM2's own TCRE from `1pctCO2` is about 0.28: the emulator's CO2 coefficient also takes the warming
+  of greenhouse gases that are not inputs (N2O, halocarbons). The SSP CO2 input is cumulative fossil GtCO2; the
+  `1pctCO2` input is in GtC.
+
+![Effect of an extra emission by year](figures/week7_task2_dJdE.png)
+
+![Warming against cumulative CO2](figures/week7_task2_tcre.png)
 
 ## Week 6: differentiating JCM
 

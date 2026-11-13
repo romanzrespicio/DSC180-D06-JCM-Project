@@ -22,6 +22,24 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-12 — Week 7 Task 2: CO2 gradient and TCRE (coltranegowan)
+- Asked: Claude Code to take jax.grad of 2081–2100 global-mean tas (ssp245) with respect to the cumulative CO2 input,
+  convert it to the effect of one extra emission per year, estimate the TCRE, and check it against a finite difference.
+- Changed: `notebooks/Week7_Emulator.ipynb` (Task 1 score and Task 2), `figures/week7_task2_dJdE.png`,
+  `figures/week7_task2_tcre.png`, README. No change to `emulator.py`.
+- Checked:
+  - Units: the SSP/historical CO2 input rises 35.6 in 2014, equal to 2014 fossil emissions (~35.5 GtCO2), so it is
+    cumulative fossil GtCO2.
+  - Emulator TCRE = 0.386 K per 1000 GtCO2 (IPCC likely range 0.27–0.63, best 0.45). Equals the closed form
+    c_CO2 / scale × global mean of the pattern slope.
+  - Central FD for an emission in 2030 agrees with the gradient to 1e-13 (δ = 1, 10, 100 GtCO2).
+  - Independent check on `1pctCO2` (not in training): NorESM2's own TCRE is about 0.28, so the emulator is 1.37x higher.
+    Likely cause: N2O and halocarbons are not inputs and rise with CO2, so the CO2 coefficient takes their warming.
+- AI got wrong / nearly wrong:
+  - The `1pctCO2` CO2 input is in GtC, not GtCO2 like the SSPs (undocumented). Read as GtCO2 it gives an impossible
+    doubling (392 GtC, while the atmosphere alone needs ~607 GtC) and a TCRE of 1.03. Inferred from physics.
+- Open questions: how ClimateBench derived the 1pctCO2 cumulative emissions; 1pctCO2 has one member.
+
 ## 2026-11-12 — Week 7 Task 1: emulator meets the target (annalyellis)
 - Asked: Claude Code to get `emulator.py` (Coltrane's WIP, ssp245 tas Total 0.552) within 20% of the best Week 3
   emulator (GP 0.299, so ≤ 0.359).
