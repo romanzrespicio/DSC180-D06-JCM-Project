@@ -22,6 +22,45 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-15 — Week 7 Reflection: JCM gradients vs emulator gradients (Roman)
+
+**What each gradient represents.** The Week 6 JCM gradient is the exact derivative of one physics-model trajectory:
+a short window (6 hours to 4 days) from one weather state, with respect to SST. It really is the model's derivative
+(forward and reverse mode agree to about 5e-6 in the dot-product test, `notebooks/week6_tasks3_4.ipynb`, Task 3.3).
+But it describes weather, not climate, and it only sees the smooth part of the physics, not convection or
+condensation switching on or off. At 6 hours the finite differences were 80-88% of the gradient (0.348 and 0.316 vs
+0.395 W m-2 K-1). For Sahel rain they were 1.3-2.9x the gradient (`notebooks/Week6_Task5_SahelRain.ipynb`,
+`figures/week6_task5_grad_vs_fd.png`). Over longer windows the gradient grew from 0.395 to 0.878 by 4 days while the
+finite differences stayed between 0.21 and 0.49, and the maps from different start dates correlated only 0.07-0.51
+(`notebooks/week6_tasks3_4.ipynb`, Task 4).
+
+The Week 7 emulator gradient is the derivative of a statistical fit (`emulator.py`) to NorESM2's ensemble-mean
+response to emissions over decades. It describes climate, not weather, but it can only reflect what we built in: a
+linear model, a 1-year lag, pattern scaling, and one EOF per aerosol species. Its finite-difference check agreed to
+1e-13 (`notebooks/Week7_Emulator.ipynb`, Task 2). That shows the code is correct. Because the emulator is linear, the
+check could not fail, so it says nothing about the physics. Our results show where the structure, not NorESM2,
+decides the answer (all from `notebooks/Week7_Emulator.ipynb`):
+- TCRE is 0.386 K per 1000 GtCO2, inside the IPCC range (0.27-0.63), but NorESM2's own 1pctCO2 run gives 0.28, so
+  the emulator is 1.37x too high. The CO2 coefficient takes warming from greenhouse gases that are not inputs
+  (mainly N2O and halocarbons) and rise along with CO2 (`figures/week7_task2_dJdE.png`, `figures/week7_task2_tcre.png`).
+- The South Asia CO2 gradient is exactly 1.03x the global one. That is pattern scaling, not a regional finding.
+- The CH4 gradient is a constant 3550x the CO2 gradient, and CH4 emitted before 2078 has zero effect, even though
+  methane lasts about 12 years. That comes from the 1-year lag, not from physics (`figures/week7_task3_co2_ch4.png`).
+- The SO2 sensitivity map correlates +1.000 with the global map, so it is just EOF1. 298 cells have a "warming" sign,
+  which is an artifact of the EOF, and the 65% of the SO2 effect from outside South Asia is EOF arithmetic, not
+  attribution (`figures/week7_task3_so2_map.png`).
+
+**When we would trust one over the other.** We would trust the emulator gradient for questions about how much warming
+over the long term, at global scale, and for scenarios inside the training range. The ssp245 score (tas Total 0.345,
+2080-2100 bias -0.07 K, Week 7 Task 1 entry below) and the TCRE check support that. We would not trust it for timing,
+regional differences, or where aerosols matter, because there its structure decides the answer. We would trust the
+JCM gradient for questions about why and where over short windows (about a day or less), such as which ocean points
+affect the next day's Sahel rain. That map is local and physically sensible (`figures/week6_task5_sahel_maps.png`).
+We would not trust it beyond about a day, or as a stand-in for a climate sensitivity. In general, a gradient deserves
+trust only when a check that tests the physics, not just the code, agrees with it. For JCM that check is finite
+differences from several start states. For the emulator it is a held-out NorESM2 experiment (1pctCO2) or known
+physics (methane's lifetime). Neither gradient is NorESM2's own gradient.
+
 ## 2026-11-12 — Week 7 Task 2: CO2 gradient and TCRE (coltranegowan)
 - Asked: Claude Code to take jax.grad of 2081–2100 global-mean tas (ssp245) with respect to the cumulative CO2 input,
   convert it to the effect of one extra emission per year, estimate the TCRE, and check it against a finite difference.
