@@ -22,6 +22,29 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-18 — Week 8 Task 4: inverse problem (coltranegowan)
+- Asked: Claude Code to find, with Optax, the smallest change to ssp245 CO2 emissions after 2025 (scale factor s(t),
+  knots at 2030/2050/2070/2100) that keeps 2081–2100 global-mean tas below a target, and to check it against the TCRE
+  and the training range.
+- Changed: new `notebooks/Week8_Emulator.ipynb`, `figures/week8_task4_pathway.png`,
+  `figures/week8_task4_extrapolation.png`, README. No change to `emulator.py`.
+- Checked:
+  - ssp245 is already at J = 2.009 K, so we solved for 2 K (as asked) and also 1.5 K (a real test).
+  - J is linear in the knots and the change measure is quadratic, so there is an exact Lagrange answer. Optax L-BFGS
+    matches it to 3 decimals for both targets.
+  - Cut in J / TCRE = 1317 GtCO2; mean cut in cumulative CO2 over 2081–2100 = 1325 GtCO2 (1.5 K).
+  - Training range: per input, the 1.5 K pathway is below ssp126 (annual 2026–2047, cumulative 2028–2078) and cuts
+    4.8 GtCO2/yr per year (ssp126: 0.79). In the emulator's scaled features it is nearer to the training years than
+    ssp245 is (median distance 0.34 vs 0.65).
+- AI got wrong / nearly wrong:
+  - First used Adam. It stopped with four almost equal knots (or missed the target with a constant step), and the
+    result looked plausible. Only the closed-form check showed it was wrong. Changed to L-BFGS.
+  - The change measure first was in GtCO2²/yr², so one penalty weight could not fit both targets (1.5 K stopped at
+    1.566 K). Made it relative to ssp245's emissions.
+  - Starting at s = 1, sqrt of the change measure gave NaN gradients; the loss uses the squared value.
+- Open questions: the emulator's TCRE is 1.37x NorESM2's CO2-only value (Week 7), and the optimizer cuts only CO2, so
+  the 1.5 K pathway probably gives about 1.64 K in NorESM2. A FaIR run of the pathway would test this.
+
 ## 2026-11-15 — Week 7 Reflection: JCM gradients vs emulator gradients (Roman)
 
 **What each gradient represents.** The Week 6 JCM gradient is the exact derivative of one physics-model trajectory:

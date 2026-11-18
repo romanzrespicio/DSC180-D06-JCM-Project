@@ -45,6 +45,7 @@ Run the notebooks from the `notebooks/` folder. Kernels: `jcm` = [environment.ym
 | 2 | Week 6 Task 2: LEAP notebook, drier soil (jvp vs finite difference) | `notebooks/Week6_Task2_SoilMoisture.ipynb` | `jcm-model` | `results/w6-task2_soil.nc`, `figures/week6_task2_*.png` |
 | 2 | Week 6 Task 5: Sahel rain sensitivity to SST | `notebooks/Week6_Task5_SahelRain.ipynb` | `jcm-model` | `results/w6-task5_sahel.nc`, `figures/week6_task5_*.png` |
 | 3 | Week 7 Tasks 1–2: emulator (`emulator.py`), CO2 gradient and TCRE | `notebooks/Week7_Emulator.ipynb` | `jcm` | `figures/week7_task2_*.png` |
+| 3 | Week 8 Task 4: inverse problem (CO2 pathway for 2 K and 1.5 K) | `notebooks/Week8_Emulator.ipynb` | `jcm` | `figures/week8_task4_*.png` |
 
 (1) The leaderboard reads `results/CNN-LSTM_ssp245.nc`. The notebook writes one file per variable, and the step that
 combines them into that file is not in the repo yet.
@@ -65,6 +66,25 @@ python check_env.py --gpu
 ```
 
 `jax.devices()` should print something like `[CudaDevice(id=0)]`.
+
+## Week 8: using the emulator
+
+Status: Task 4 is done (coltranegowan).
+
+Notebook: [notebooks/Week8_Emulator.ipynb](notebooks/Week8_Emulator.ipynb) (kernel `jcm`, about 10 minutes on a laptop
+CPU; most of it is the Adam comparison). It uses the Week 7 emulator without change.
+
+- **Task 4.** Annual CO2 after 2025 is scaled by $s(t)$ (knots at 2030, 2050, 2070, 2100), and Optax L-BFGS finds the
+  smallest change that keeps 2081–2100 warming at the target. ssp245 is already at 2.009 K, so 2 K needs only a 1% cut
+  (about 24 GtCO2). 1.5 K needs about 1300 GtCO2 less, equal to the cut in J divided by the TCRE (0.386): in this
+  emulator a target is a cumulative-CO2 budget. The 1.5 K pathway is below ssp126 in 2026–2047 and cuts 6 times faster
+  than any training SSP. But in the emulator's own features it is nearer to the training data than ssp245 is, because
+  the features cannot see the rate of a cut. The emulator's TCRE is 1.37x NorESM2's CO2-only value, so the real cut
+  would probably give about 1.64 K, not 1.5 K. Details in the notebook notes.
+
+![Optimized pathways](figures/week8_task4_pathway.png)
+
+![Distance to the training data](figures/week8_task4_extrapolation.png)
 
 ## Week 7: a differentiable ClimateBench emulator
 
