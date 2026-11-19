@@ -46,6 +46,7 @@ Run the notebooks from the `notebooks/` folder. Kernels: `jcm` = [environment.ym
 | 2 | Week 6 Task 5: Sahel rain sensitivity to SST | `notebooks/Week6_Task5_SahelRain.ipynb` | `jcm-model` | `results/w6-task5_sahel.nc`, `figures/week6_task5_*.png` |
 | 3 | Week 7 Tasks 1–2: emulator (`emulator.py`), CO2 gradient and TCRE | `notebooks/Week7_Emulator.ipynb` | `jcm` | `figures/week7_task2_*.png` |
 | 3 | Week 8 Task 4: inverse problem (CO2 pathway for 2 K and 1.5 K) | `notebooks/Week8_Emulator.ipynb` | `jcm` | `figures/week8_task4_*.png` |
+| 3 | Week 8 Task 5: stress tests (emissions stop, fixed at 2015, aerosols removed) | `notebooks/Week8_Emulator.ipynb` | `jcm` | `figures/week8_task5_stress.png` |
 
 (1) The leaderboard reads `results/CNN-LSTM_ssp245.nc`. The notebook writes one file per variable, and the step that
 combines them into that file is not in the repo yet.
@@ -69,7 +70,7 @@ python check_env.py --gpu
 
 ## Week 8: using the emulator
 
-Status: Task 4 is done (coltranegowan).
+Status: Task 4 is done (coltranegowan). Task 5 is done (annalyellis).
 
 Notebook: [notebooks/Week8_Emulator.ipynb](notebooks/Week8_Emulator.ipynb) (kernel `jcm`, about 10 minutes on a laptop
 CPU; most of it is the Adam comparison). It uses the Week 7 emulator without change.
@@ -85,6 +86,18 @@ CPU; most of it is the Adam comparison). It uses the Week 7 emulator without cha
 ![Optimized pathways](figures/week8_task4_pathway.png)
 
 ![Distance to the training data](figures/week8_task4_extrapolation.png)
+
+- **Task 5.** Three scenarios outside training, checked against two NorESM2 runs that are also outside training
+  (abrupt-4xCO2, ssp370-lowNTCF). *Fixed at 2015*: a straight line at TCRE × emissions (0.137 K/decade), which is
+  plausible. *All stop in 2030*: the emulator cools by 0.1 K within two years and then stays flat. Physics expects a
+  flat or slightly rising decade, because CH4 decays over ~12 years, but the emulator removes CH4's 0.45 K at once.
+  *SO2 and BC removed*: +0.35 K within two years. On lowNTCF the total is close to NorESM2 (+0.24 against +0.19 K),
+  but for the wrong reasons: **BC has the wrong sign** (SO2 and BC are collinear, r = 0.65), and SO2 is too weak
+  (hist-aer −0.43 against −0.75 K). abrupt-4xCO2: the emulator levels off by year 5, while NorESM2 is still warming
+  at year 100. For Task 4, the CO2 budget is about as trustworthy as the TCRE, but the timing is not. An optimizer
+  allowed to change aerosols would exploit the BC sign. Phase II candidates are in the notebook notes.
+
+![Stress tests](figures/week8_task5_stress.png)
 
 ## Week 7: a differentiable ClimateBench emulator
 

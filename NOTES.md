@@ -22,6 +22,32 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-19 — Week 8 Task 5: stress tests (annalyellis)
+- Asked: Claude Code to run the Week 7 emulator on the three Task 5 scenarios (all emissions stop in 2030, fixed at
+  2015, SO2 and BC removed in 2030) and to judge sign, size and timescale.
+- Changed: Task 5 section added to `notebooks/Week8_Emulator.ipynb` (Task 4 code and outputs unchanged after the
+  rerun), `figures/week8_task5_stress.png`, README. No change to `emulator.py`.
+- Checked:
+  - Expectations were written before the runs (table in the notebook).
+  - Against NorESM2 runs outside training rather than only against expectation: abrupt-4xCO2 (timescale) and
+    ssp370-lowNTCF minus ssp370 (SO2 and BC cut to ~45%, CO2 and CH4 equal in the inputs).
+  - The emulator is linear, so the per-species effects must add up exactly to the total (asserted).
+  - Fixed at 2015: trend 0.137 K/decade = TCRE × 2015 emissions (0.138).
+- Findings:
+  - BC has the wrong sign: removing it warms by 0.14 K. The SO2 and BC features are collinear (r = 0.65). SO2 is too
+    weak (hist-aer −0.43 against NorESM2 −0.75 K). On lowNTCF the two errors cancel (+0.24 against +0.19 K).
+  - CH4 acts within 1 year: all emissions stopping gives an immediate −0.1 K, not a flat or slightly rising decade.
+  - No slow response: abrupt-4xCO2 levels off at 1.76 K by year 5, while NorESM2 goes 1.2 → 3.8 K over 100 years.
+  - Aerosol warming pattern: NH/SH 2.0 against NorESM2's 2.8; map correlation 0.58.
+- AI got wrong / nearly wrong:
+  - It indexed abrupt-4xCO2 by position, but the output file skips years after year 120 (121, 122, 125, …) and is
+    erratic there. Caught when the plot showed spikes. Now uses years 1–100, with an assert on the time coordinate.
+  - The first notebook rerun silently ran without the new cells (`conda run` does not pass a heredoc's stdin).
+    Caught by checking the cell count.
+- Open questions: whether constraining the BC sign or fitting SO2 and BC with a fixed ratio fixes lowNTCF and
+  hist-aer at the same time; whether a two-timescale core (FaIR-like) changes the Task 4 pathway. Both are Phase II
+  candidates.
+
 ## 2026-11-18 — Week 8 Task 4: inverse problem (coltranegowan)
 - Asked: Claude Code to find, with Optax, the smallest change to ssp245 CO2 emissions after 2025 (scale factor s(t),
   knots at 2030/2050/2070/2100) that keeps 2081–2100 global-mean tas below a target, and to check it against the TCRE
