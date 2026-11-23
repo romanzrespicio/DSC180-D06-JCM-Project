@@ -379,32 +379,16 @@ Use the course LaTeX template on Overleaf.
 
 The schedule (Section 11) is a separate PDF.
 
-## 15. Elevator pitch
+## 15. Elevator pitch bullet points
 
-2–3 minutes, spoken, no slides. Each member records a separate video. Use this as a guide, not a script: the TA grades
-down a pitch that sounds "overly scripted".
-
-**Context.** To plan for the future, we need to know how the climate will change in each region, not only for the whole
-planet. California's water, its fire risk, and its coastal fog all depend on the Pacific Ocean next to the coast. That
-part of the ocean is unusual. Winds push the surface water away, and cold water comes up from below. That cold water
-keeps the West Coast cool, and it affects El Niño and California's rain.
-
-**Complication.** Big climate models simulate the ocean well, but one run takes weeks on a supercomputer. Thus
-scientists also use small, fast models that can test many futures in an hour. To be fast, these models treat the ocean
-as one flat layer of water. The currents that move heat around are frozen at today's values. They cannot change when the
-planet warms. In our model, this mistake makes the eastern Pacific warm about 40% faster than in a full climate model.
-And that error is in exactly the region that matters most for the West Coast.
-
-**Question.** Can we keep the model fast but teach its ocean to respond to warming? We want to add a small neural network
-that learns how ocean heat transport changes as the climate warms. Our model is differentiable: it can calculate how
-each output changes when it changes an input. Thus we can train the network inside the running climate model, against
-the result that we want it to get right. Most earlier work trains such networks offline, outside the model, and they
-often fail when they go back into the model. We compare the two methods directly.
-
-**Hypothesis.** We expect the network trained inside the model to cut the error in the eastern Pacific warming pattern by
-at least half, compared with the frozen ocean. It must also beat a simple one-number formula for ocean heat uptake. If
-it does, a fast model can give more reliable regional answers for the West Coast. We measure success against a full
-climate model, on a warming scenario that the network never saw in training.
+- We need to know how the climate will change in each region to help plan for future changes and help people connect global warming to real affects in their lives
+- California’s water resources, fire risk, and coastal fog depend on the eastern Pacific Ocean.  
+- Winds push the warm surface water west and surface deeper colder water that cools the west coast and affects rain, as well as El Niño
+- Big climate models simulate ocean currents well, but take weeks for a single run. Our mentor’s lab focuses on small faster models that test many future scenarios, but treat the ocean as a flat slab of water with no changing currents on how heat is moved throughout the world and do not change when the planet warms.
+- This makes the Eastern Pacific Ocean warm about 40% faster than in a full model, which affects warming predictions for the West Coast.
+- Can we keep a climate model fast but teach the ocean model to respond to warming?
+- We want to add a small neural network that learns how ocean heat transport responds to warming. Since our model which is differentiable, we can calculate how each input change affects each output. And therefore can train our network inside the running model against the expected result.
+- If successful, we expect our network to cut the error in eastern pacific warming pattern by around half. If this works, a fast model can give more accurate regional answers, especially around the West Coast, closer to the full slower climate model.
 
 The 40% comes from Week 5: JEM warms the east Pacific at 1.57 K per K, and NorESM2 at 1.09.
 
