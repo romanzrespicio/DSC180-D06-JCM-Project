@@ -2,11 +2,6 @@
 
 Working plan for the Quarter 2 project proposal. The proposal (written proposal, schedule, elevator pitch) is due Friday, December 4. Numbers marked "estimate" are not measured yet.
 
-**Changes from the previous version**
-
-1. **Memory.** The ocean now has a second, deep layer. A correction that depends only on the current state cannot create slow warming, so the old plan could not reach its main goals (decades-long warming, the ocean thermostat, the 1pctCO2 test). The network now predicts the exchange with the deep layer and the change in heat transport.
-2. **Online loss.** The loss compares climate statistics, never month-by-month weather, because JEM and NorESM2 have different weather. We add a **partially online** training mode, so training now compares three modes: offline, partially online and fully online.
-3. **Communication.** We add a headline number, a speed-versus-accuracy figure, everyday analogies and a website plan.
 
 ## Contents
 
