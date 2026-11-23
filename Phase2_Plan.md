@@ -381,13 +381,13 @@ The schedule (Section 11) is a separate PDF.
 
 ## 15. Elevator pitch bullet points
 
-- We need to know how the climate will change in each region to help plan for future changes and help people connect global warming to real affects in their lives
+- We need to know how the climate will change in each region to help plan for future changes and help people connect global warming to real effects in their lives
 - California’s water resources, fire risk, and coastal fog depend on the eastern Pacific Ocean.  
-- Winds push the warm surface water west and surface deeper colder water that cools the west coast and affects rain, as well as El Niño
-- Big climate models simulate ocean currents well, but take weeks for a single run. Our mentor’s lab focuses on small faster models that test many future scenarios, but treat the ocean as a flat slab of water with no changing currents on how heat is moved throughout the world and do not change when the planet warms.
+- Winds push the warm surface water away (west along the equator, offshore along the California coast), and colder deep water comes up to replace it. That cold water cools the West Coast and affects rain, as well as El Niño
+- Big climate models simulate ocean currents well, but take weeks for a single run. Our mentor’s lab works on small, faster models that can test many future scenarios. The fast model that we use treats the ocean as a flat slab of water: the currents that move heat around the world are fixed and do not change when the planet warms.
 - This makes the Eastern Pacific Ocean warm about 40% faster than in a full model, which affects warming predictions for the West Coast.
 - Can we keep a climate model fast but teach the ocean model to respond to warming?
-- We want to add a small neural network that learns how ocean heat transport responds to warming. Since our model which is differentiable, we can calculate how each input change affects each output. And therefore can train our network inside the running model against the expected result.
+- We want to add a small neural network that learns how ocean heat transport responds to warming. Since our model is differentiable, we can calculate how each input change affects each output. Therefore we can train our network inside the running model against the expected result.
 - If successful, we expect our network to cut the error in eastern pacific warming pattern by around half. If this works, a fast model can give more accurate regional answers, especially around the West Coast, closer to the full slower climate model.
 
 The 40% comes from Week 5: JEM warms the east Pacific at 1.57 K per K, and NorESM2 at 1.09.
