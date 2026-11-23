@@ -22,6 +22,40 @@ Things to check every time (assistants get these wrong without warning):
 
 ---
 
+## 2026-11-22 — Week 8 Reflection: what gradient-based scenario analysis can and cannot tell a decision-maker (Roman)
+
+**What it can tell.** Gradients turn a target into a pathway. In Task 4, one optimization found the smallest change
+to ssp245 CO2 emissions that meets a warming target: a 1% cut (about 24 GtCO2) for 2 K, and about 1300 GtCO2 less by
+2100 for 1.5 K (`figures/week8_task4_pathway.png`). The gradients also explain the answer. A tonne emitted at any time
+before about 2080 counts the same, so the target is a cumulative-CO2 budget: the cut in J divided by the TCRE is
+1317 GtCO2, and the optimizer cut 1325. A decision-maker gets the size of the budget, which inputs matter and when,
+and a comparison of targets in seconds instead of new NorESM2 runs. Task 6 shows the same tool works for any target:
+one `jax.grad` call gives the sensitivity of South Asia rain to every input in every year.
+
+**What it cannot tell.** The gradient belongs to the emulator, not to the climate, so every answer is only as good as
+the emulator at that point (all from `notebooks/Week8_Emulator.ipynb`):
+- The size of the answer carries the emulator's bias. Its TCRE is 1.37x NorESM2's CO2-only value, so the "1.5 K"
+  pathway would probably give about 1.64 K.
+- The timing of the answer is not physical. In Task 5 the emulator finished its response to abrupt-4xCO2 by year 5
+  (1.76 K), while NorESM2 was still warming at year 100 (3.8 K), and stopping CH4 removed 0.45 K within two years.
+  So the budget is usable, but the year-by-year shape and any earlier target are not.
+- An optimizer looks for the emulator's mistakes. BC has the wrong sign (removing it warms by 0.14 K), so an
+  optimization over aerosols would reward more black carbon. A stress test found this; the optimization would not have.
+- Being close to the training data is not validation. The 1.5 K pathway cuts 4.8 GtCO2/yr per year, 6 times faster
+  than any training SSP, but in the emulator's features it is nearer to the training years than ssp245 is, because
+  the features cannot see the rate of a cut (`figures/week8_task4_extrapolation.png`).
+- A precise gradient is not a correct one. In Task 6 the pr gradients vary by only 0.8% between ensemble members, but
+  they are the tas gradients times one constant (0.25). NorESM2 changes global rain 2.3 times more per kelvin for
+  aerosols than for greenhouse gases, and the emulator uses one value for both.
+- "As little change as possible" was our choice (squared change in annual emissions). It says nothing about cost,
+  feasibility or fairness, and a different measure gives a different pathway. There is also no uncertainty range: it
+  is one emulator and one number. Even the optimizer needs a check: Adam returned a plausible but wrong pathway, and
+  only the closed-form answer showed it.
+
+**In short.** Gradient-based analysis is a fast way to ask "what would it take" and to find which scenarios are worth
+running in a full model. It cannot replace that run. We would give a decision-maker the budget with the TCRE caveat,
+not the pathway's timing, and nothing about aerosols or rain until the emulator passes the Task 5 tests.
+
 ## 2026-11-19 — Week 8 Task 5: stress tests (annalyellis)
 - Asked: Claude Code to run the Week 7 emulator on the three Task 5 scenarios (all emissions stop in 2030, fixed at
   2015, SO2 and BC removed in 2030) and to judge sign, size and timescale.
